@@ -1,0 +1,195 @@
+[
+  {
+    "metadata": {
+      "aligned_reads_index": {
+        "data_category": "Sequencing Reads",
+        "data_format": "CRAI",
+        "data_type": "Aligned Reads Index",
+        "file_name": "NWD100953.recab.cram.crai",
+        "file_size": 2201638,
+        "label": "aligned_reads_index",
+        "link_fields": {
+          "aligned_reads_files.id": "",
+          "aligned_reads_files.submitter_id": "",
+          "core_metadata_records.id": "",
+          "core_metadata_records.submitter_id": "",
+          "submitted_aligned_reads_files.id": "60474000-77e2-4979-8a7e-ca435df5113d",
+          "submitted_aligned_reads_files.submitter_id": "NWD100953-cram"
+        },
+        "md5sum": "3b0f63a815384a3d44c61b4abd40caf9",
+        "node_id": "7790a225-6afd-4733-90dc-da8734cbc1e2",
+        "object_id": "dg.4503/630d31c3-381e-488d-b639-ce5d047a0142",
+        "project_id": "topmed-public",
+        "submitter_id": "NWD100953-crai"
+      },
+      "submitted_aligned_reads": {
+        "data_category": "Sequencing Reads",
+        "data_format": "CRAM",
+        "data_type": "Aligned Reads",
+        "experimental_strategy": "WGS",
+        "file_name": "NWD100953.recab.cram",
+        "file_size": 37501686827,
+        "label": "submitted_aligned_reads",
+        "link_fields": {
+          "core_metadata_records.id": "",
+          "core_metadata_records.submitter_id": "",
+          "read_groups.id#1": "4dd92bb3-4e67-41fd-a5c1-37e30155c208",
+          "read_groups.submitter_id#1": "NWD100953-rg"
+        },
+        "md5sum": "f9e72bdf25bf4b4f0e581d9218fec2eb",
+        "node_id": "60474000-77e2-4979-8a7e-ca435df5113d",
+        "object_id": "dg.4503/01b048d0-e128-4cb0-94e9-b2d2cab7563d",
+        "project_id": "topmed-public",
+        "submitter_id": "NWD100953-cram"
+      },
+      "read_group": {
+        "RIN": "",
+        "adapter_name": "",
+        "adapter_sequence": "",
+        "barcoding_applied": "",
+        "base_caller_name": "",
+        "base_caller_version": "",
+        "experiment_name": "",
+        "flow_cell_barcode": "",
+        "includes_spike_ins": "",
+        "instrument_model": "Illumina HiSeq X Ten",
+        "is_paired_end": "",
+        "label": "read_group",
+        "library_name": "",
+        "library_preparation_kit_catalog_number": "",
+        "library_preparation_kit_name": "",
+        "library_preparation_kit_vendor": "",
+        "library_preparation_kit_version": "",
+        "library_selection": "",
+        "library_strand": "",
+        "library_strategy": "WGS",
+        "link_fields": {
+          "aliquots.id": "eb74367b-cd71-4874-a85d-3c3eb54d74da",
+          "aliquots.submitter_id": "NWD100953"
+        },
+        "node_id": "4dd92bb3-4e67-41fd-a5c1-37e30155c208",
+        "platform": "Illumina",
+        "project_id": "topmed-public",
+        "read_group_name": "",
+        "read_length": "",
+        "sequencing_center": "WashU",
+        "sequencing_date": "",
+        "size_selection_range": "",
+        "spike_ins_concentration": "",
+        "spike_ins_fasta": "",
+        "submitter_id": "NWD100953-rg",
+        "target_capture_kit_catalog_number": "",
+        "target_capture_kit_name": "",
+        "target_capture_kit_target_region": "",
+        "target_capture_kit_vendor": "",
+        "target_capture_kit_version": "",
+        "to_trim_adapter_sequence": ""
+      },
+      "aliquot": {
+        "aliquot_quantity": "",
+        "aliquot_volume": "",
+        "amount": "",
+        "analyte_isolation_batch_id": "",
+        "analyte_isolation_date": "",
+        "analyte_isolation_method": "",
+        "analyte_type": "DNA",
+        "concentration": "",
+        "exclude": "",
+        "exclusion_criteria": "",
+        "experiment_batch_id": "",
+        "experiment_date": "",
+        "experimental_strategy": "",
+        "label": "aliquot",
+        "link_fields": {
+          "samples.id#1": "d5f553d2-7af5-47eb-be1a-4fa742fd812d",
+          "samples.submitter_id#1": "HG01110_sample"
+        },
+        "node_id": "eb74367b-cd71-4874-a85d-3c3eb54d74da",
+        "project_id": "topmed-public",
+        "submitter_id": "NWD100953"
+      },
+      "sample": {
+        "autolysis_score": "",
+        "biospecimen_anatomic_site": "",
+        "biospecimen_anatomic_site_detail": "",
+        "biospecimen_anatomic_site_uberon_id": "",
+        "biospecimen_anatomic_site_uberon_term": "",
+        "biospecimen_physical_site": "",
+        "biospecimen_type": "Normal - blood derived",
+        "collection_kit": "",
+        "collection_site": "",
+        "composition": "B-lymphocyte",
+        "current_weight": "",
+        "freezing_method": "",
+        "hours_to_collection": "",
+        "hours_to_sample_procurement": "",
+        "internal_notes": "",
+        "is_ffpe": "",
+        "label": "sample",
+        "link_fields": {
+          "cases.id": "57a5282b-8a48-4b30-afe7-63e19bd3aaca",
+          "cases.submitter_id": "HG01110"
+        },
+        "method_of_sample_procurement": "",
+        "node_id": "d5f553d2-7af5-47eb-be1a-4fa742fd812d",
+        "oct_embedded": "",
+        "pathology_notes": "",
+        "preservation_method": "",
+        "project_id": "topmed-public",
+        "prosector_notes": "",
+        "sample_type": "",
+        "submitter_id": "HG01110_sample",
+        "tissue_type": ""
+      }
+    },
+    "manifest": [
+      {
+        "checksums": [
+          {
+            "checksum": "3b0f63a815384a3d44c61b4abd40caf9",
+            "type": "md5"
+          }
+        ],
+        "created": "2018-05-26T13:43:15.070662",
+        "id": "dg.4503/630d31c3-381e-488d-b639-ce5d047a0142",
+        "name": "NWD100953.recab.cram.crai",
+        "size": "2201638",
+        "updated": "2018-05-26T13:43:15.070672",
+        "urls": [
+          {
+            "url": "s3://cgp-commons-public/topmed_open_access/44a8837b-4456-5709-b56b-54e23000f13a/NWD100953.recab.cram.crai"
+          },
+          {
+            "url": "gs://cgp-commons-multi-region-public/topmed_open_access/44a8837b-4456-5709-b56b-54e23000f13a/NWD100953.recab.cram.crai"
+          }
+        ],
+        "version": "2ba0ac25",
+        "updated_datetime": "2018-05-26T13:43:15.070662Z"
+      },
+      {
+        "checksums": [
+          {
+            "checksum": "f9e72bdf25bf4b4f0e581d9218fec2eb",
+            "type": "md5"
+          }
+        ],
+        "created": "2018-05-26T13:37:19.491772",
+        "id": "dg.4503/01b048d0-e128-4cb0-94e9-b2d2cab7563d",
+        "name": "NWD100953.recab.cram",
+        "size": "37501686827",
+        "updated": "2018-05-26T13:37:19.491781",
+        "urls": [
+          {
+            "url": "s3://cgp-commons-public/topmed_open_access/44a8837b-4456-5709-b56b-54e23000f13a/NWD100953.recab.cram"
+          },
+          {
+            "url": "gs://cgp-commons-multi-region-public/topmed_open_access/44a8837b-4456-5709-b56b-54e23000f13a/NWD100953.recab.cram"
+          }
+        ],
+        "version": "3e0c038c",
+        "updated_datetime": "2018-05-26T13:37:19.491772Z"
+      }
+    ],
+    "bundle_did": "81a1b0ea-f143-4090-a6a5-29fb051a6c64"
+  }
+]

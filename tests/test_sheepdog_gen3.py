@@ -30,7 +30,7 @@ class TestSheepdogGen3Transforming(unittest.TestCase):
 
         # TODO: maybe make a json schema and test our output against it
 
-    def test_sheepdog_gen3_transorming(self):
+    def test_sheepdog_gen3_transforming(self):
         message('Run the transformer on sheepdog\'s output')
         args = [self.test_file, '--output-json', self.out_file]
         main(args)

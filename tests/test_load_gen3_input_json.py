@@ -15,6 +15,7 @@ from tests import eventually, ignore_resource_warnings, message
 
 from scripts.cgp_data_loader import main as cgp_data_loader_main
 
+
 class TestGen3InputFormatLoading(unittest.TestCase):
 
     @classmethod
@@ -26,7 +27,10 @@ class TestGen3InputFormatLoading(unittest.TestCase):
         cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'mbaumann-dss-staging')
         cls.project_path = Path(__file__).parents[1]
         cls.test_files = [f'{cls.project_path}/tests/test_data/{test_file}'
-                          for test_file in ['gen3_sample_input.json', 'gen3_sample_input2.json']]
+                          for test_file in ['gen3_sample_input.json',
+                                            'gen3_sample_input2.json',
+                                            'transformer_sample_output.json']
+                          ]
 
     @staticmethod
     @contextmanager
@@ -62,6 +66,9 @@ class TestGen3InputFormatLoading(unittest.TestCase):
 
     def test_gen3_input_format2_loading_from_cli(self):
         self._test_gen3_input_format_loading_from_cli(self.test_files[1])
+
+    def test_transformer_gen3_input_loading_from_cli(self):
+        self._test_gen3_input_format_loading_from_cli(self.test_files[2])
 
     @ignore_resource_warnings
     def _test_gen3_input_format_loading_from_cli(self, test_json):

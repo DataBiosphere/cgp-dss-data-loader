@@ -43,8 +43,15 @@ class Transformer:
         return metadata_field['link_fields'][link_key]
 
     def _add_file_to_bundle(self, bundle, link_source):
-        file_key = bundle['metadata'][link_source]['object_id']
+        source_dict = bundle['metadata'][link_source]
+        file_key = source_dict['object_id']
         file_dict = self._data_objects_dict[file_key]
+
+        # put filename in file_dict since it's only stored in the metadata for some reason...
+        file_name = source_dict['file_name']
+        file_dict['name'] = file_name
+        # This is ugly and sketchy, but should do the job for now
+        file_dict['updated_datetime'] = file_dict['created'] + 'Z'
         bundle['manifest'].append(file_dict)
 
     def _add_metadata_field(self, metadata_dict, source_field_name: str, linked_field_name: str, link_name: str):
