@@ -19,12 +19,23 @@ class TestSheepdogGen3Transforming(unittest.TestCase):
     def setUp(self):
         message('Make sure the output file doesn\'t exist yet')
         with self.assertRaises(FileNotFoundError):
-            open(self.out_file, 'r')
+            with open(self.out_file, 'r'):
+                pass
+
+    def _validate_output(self):
+        message('Make sure that the output file was actually created')
+        with self.assertRaises(FileExistsError):
+            with open(self.out_file, 'x'):
+                pass
+
+        # TODO: maybe make a json schema and test our output against it
 
     def test_sheepdog_gen3_transorming(self):
         message('Run the transformer on sheepdog\'s output')
         args = [self.test_file, '--output-json', self.out_file]
         main(args)
+
+        self._validate_output()
 
     def tearDown(self):
         message('Clean up the output file if there is one')
