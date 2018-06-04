@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 
 from tests import message
-from transformer.transform import main
+from transformer.transform import main as transformer_main
 
 
 class TestSheepdogGen3Transforming(unittest.TestCase):
@@ -32,8 +32,8 @@ class TestSheepdogGen3Transforming(unittest.TestCase):
 
     def test_sheepdog_gen3_transforming(self):
         message('Run the transformer on sheepdog\'s output')
-        args = [self.test_file, '--output-json', self.out_file]
-        main(args)
+        argv = [self.test_file, '--output-json', self.out_file]
+        transformer_main(argv)
 
         self._validate_output()
 

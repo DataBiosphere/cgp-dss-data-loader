@@ -9,6 +9,8 @@ from collections import namedtuple
 import argparse
 
 
+"""A metadata link is all the information necessary to get metadata
+for a particular field from the field that links to it."""
 MetadataLink = namedtuple('MetadataLink', ['source_field_name', 'linked_field_name', 'link_name'])
 
 
@@ -32,21 +34,19 @@ class Transformer:
     def __init__(self, input_dict: dict) -> None:
         self._metadata = self._build_metadata_dict(input_dict['metadata'])
         self._data_objects_dict = self._build_data_objects_dict(input_dict['data_objects'])
-        self._metadata_links = [MetadataLink('aligned_reads_index', 'submitted_aligned_reads', 'submitted_aligned_reads_files.id'),
+        self._metadata_links = [MetadataLink('aligned_reads_index', 'submitted_aligned_reads',
+                                             'submitted_aligned_reads_files.id'),
                                 MetadataLink('submitted_aligned_reads', 'read_group', 'read_groups.id#1'),
                                 MetadataLink('read_group', 'aliquot', 'aliquots.id'),
                                 MetadataLink('aliquot', 'sample', 'samples.id#1'),
                                 ]
 
-    @staticmethod
-    def _get_link(metadata_field: dict, link_key: str) -> dict:
-        return metadata_field['link_fields'][link_key]
-
-    def _add_file_to_bundle(self, bundle, link_source):
+    def _add_file_to_bundle(self, bundle: dict, link_source: str):
         source_dict = bundle['metadata'][link_source]
         file_key = source_dict['object_id']
         file_dict = self._data_objects_dict[file_key]
 
+        # The format of the bundle is a little broken. Here we fix it:
         # put filename in file_dict since it's only stored in the metadata for some reason...
         file_name = source_dict['file_name']
         file_dict['name'] = file_name
