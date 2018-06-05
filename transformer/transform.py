@@ -39,6 +39,7 @@ class Transformer:
                                 MetadataLink('submitted_aligned_reads', 'read_group', 'read_groups.id#1'),
                                 MetadataLink('read_group', 'aliquot', 'aliquots.id'),
                                 MetadataLink('aliquot', 'sample', 'samples.id#1'),
+                                MetadataLink('sample', 'case', 'cases.id'),
                                 ]
 
     def _add_file_to_bundle(self, bundle: dict, link_source: str):
