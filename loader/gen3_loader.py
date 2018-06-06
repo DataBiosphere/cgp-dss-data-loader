@@ -2,8 +2,8 @@ import uuid
 
 from loader.base_loader import DssUploader, MetadataFileUploader
 
-SCHEMA_URL = ('https://raw.githubusercontent.com/DataBiosphere/metadata-schema/master'
-              '/json_schema/cgp/gen3/0.1.0/cgp_gen3_metadata.json')
+SCHEMA_URL = ('https://raw.githubusercontent.com/DataBiosphere/metadata-schema/master/'
+              'json_schema/cgp/gen3/1.0.0/cgp_gen3_metadata.json')
 
 
 class Gen3FormatBundleUploader:
