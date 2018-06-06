@@ -16,6 +16,9 @@ from tests import eventually, ignore_resource_warnings, message
 from scripts.cgp_data_loader import main as cgp_data_loader_main
 
 
+TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
+
+
 class TestGen3InputFormatLoading(unittest.TestCase):
 
     @classmethod
@@ -25,12 +28,6 @@ class TestGen3InputFormatLoading(unittest.TestCase):
         cls.dss_client.host = 'https://hca-dss-4.ucsc-cgp-dev.org/v1'
         cls.dss_endpoint = os.getenv('TEST_DSS_ENDPOINT', cls.dss_client.host)
         cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'mbaumann-dss-staging')
-        cls.project_path = Path(__file__).parents[1]
-        cls.test_files = [f'{cls.project_path}/tests/test_data/{test_file}'
-                          for test_file in ['gen3_sample_input.json',
-                                            'gen3_sample_input2.json',
-                                            'transformer_sample_output.json']
-                          ]
 
     @staticmethod
     @contextmanager
@@ -61,17 +58,17 @@ class TestGen3InputFormatLoading(unittest.TestCase):
                 f'{tmp_json}']
         cgp_data_loader_main(args)
 
-    def test_gen3_input_format_loading_from_cli(self):
-        self._test_gen3_input_format_loading_from_cli(self.test_files[0])
+    def test_gen3_loading_nested_metadata(self):
+        self._test_gen3_loading_from_cli(TEST_DATA_PATH / 'gen3_sample_input_nested_metadata.json')
 
-    def test_gen3_input_format2_loading_from_cli(self):
-        self._test_gen3_input_format_loading_from_cli(self.test_files[1])
+    def test_gen3_loading_flat_metadata(self):
+        self._test_gen3_loading_from_cli(TEST_DATA_PATH / 'gen3_sample_input_flat_metadata.json')
 
-    def test_transformer_gen3_input_loading_from_cli(self):
-        self._test_gen3_input_format_loading_from_cli(self.test_files[2])
+    def test_gen3_loading_transformer_output(self):
+        self._test_gen3_loading_from_cli(TEST_DATA_PATH / 'transformer_sample_output.json')
 
     @ignore_resource_warnings
-    def _test_gen3_input_format_loading_from_cli(self, test_json):
+    def _test_gen3_loading_from_cli(self, test_json):
         """
         Test that a Gen3 JSON format input file can be uploaded to the DSS,
         and that all of the data files loaded are loaded by reference
