@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 import uuid
@@ -8,13 +9,23 @@ from tests import message
 from transformer.transform import main as transformer_main
 
 
+def is_dict_subset(sub: dict, sup: dict) -> bool:
+    for key in sub:
+        try:
+            if sub[key] != sup[key]:
+                return False
+        except KeyError:
+            return False
+    return True
+
+
 class TestSheepdogGen3Transforming(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.project_path = Path(__file__).parents[1]
-        cls.test_file = f'{cls.project_path}/tests/test_data/topmed-public.json'
-        cls.out_file = f'{cls.project_path}/tests/{str(uuid.uuid4())}.tmp.json'
+        cls.test_path = Path(__file__).parents[0]
+        cls.test_file = cls.test_path / 'test_data/topmed-public.json'
+        cls.out_file = cls.test_path / f'{str(uuid.uuid4())}.tmp.json'
 
     def setUp(self):
         message('Make sure the output file doesn\'t exist yet')
@@ -24,15 +35,23 @@ class TestSheepdogGen3Transforming(unittest.TestCase):
 
     def _validate_output(self):
         message('Make sure that the output file was actually created')
-        with self.assertRaises(FileExistsError):
-            with open(self.out_file, 'x'):
-                pass
+        os.path.isfile(str(self.out_file))
 
-        # TODO: maybe make a json schema and test our output against it
+        with open(self.test_path / 'test_data/transformer_sample_output.json', 'r',) as fp:
+            valid_output = json.load(fp)
+        valid_bundle_did = valid_output[0]['bundle_did']
+        valid_output = valid_output[0]
+
+        with open(self.out_file, 'r') as fp:
+            test_output = json.load(fp)
+        # since bundle did is changed each time the transformer runs, just normalize it for comparison
+        for bundle in test_output:
+            bundle['bundle_did'] = valid_bundle_did
+        self.assertTrue(valid_output in test_output)
 
     def test_sheepdog_gen3_transforming(self):
         message('Run the transformer on sheepdog\'s output')
-        argv = [self.test_file, '--output-json', self.out_file]
+        argv = [str(self.test_file), '--output-json', str(self.out_file)]
         transformer_main(argv)
 
         self._validate_output()
