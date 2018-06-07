@@ -9,16 +9,6 @@ from tests import message
 from transformer.transform import main as transformer_main
 
 
-def is_dict_subset(sub: dict, sup: dict) -> bool:
-    for key in sub:
-        try:
-            if sub[key] != sup[key]:
-                return False
-        except KeyError:
-            return False
-    return True
-
-
 class TestSheepdogGen3Transforming(unittest.TestCase):
 
     @classmethod
