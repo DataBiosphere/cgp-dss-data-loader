@@ -8,13 +8,28 @@ from collections import namedtuple
 
 import argparse
 
+# Welcome to the gen3 transformer. Here is an overview of how the gen3 data is parsed and transformed.
+#
+# To transform data from sheepdog's gen3 output we need to parse the dictionaries that sheepdog outputs.
+# Each of these are parsed and stored in self._data_objects_dict (although not all are used). These
+# dictionaries contain metadata of their respective categories, but the metadata is linked to other
+# metadata fields in other categories and data objects only by reference.
+#
+# Starting with 'aligned_reads_index' we can get all of the related data files and metadata just by
+# following the links in the metadata. These links are hardcoded in MetadataLink tuples. This little
+# network of connected metadata and files is what ends up comprising a bundle.
+#
+# The metadata for a bundle is linked together pretty consistently and is done iteratively using
+# self._add_metadata_field(). Files are linked in a slightly different way, so a different helper
+# function (self._add_file_to_bundle()) takes care of this process.
+
 
 """A metadata link is all the information necessary to get metadata
 for a particular field from the field that links to it."""
 MetadataLink = namedtuple('MetadataLink', ['source_field_name', 'linked_field_name', 'link_name'])
 
 
-class Transformer:
+class Gen3Transformer:
 
     @staticmethod
     def _build_data_objects_dict(data_objects: list):
@@ -107,7 +122,7 @@ def main(argv):
     options = parser.parse_args(argv)
 
     json_dict = open_json_file(options.input_json)
-    transformer = Transformer(json_dict)
+    transformer = Gen3Transformer(json_dict)
     bundle_iterator = transformer.transform()
     write_output(bundle_iterator, options.output_json)
 

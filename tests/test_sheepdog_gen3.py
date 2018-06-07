@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 
 from tests import message
-from transformer.transform import main as transformer_main
+from transformer.gen3_transformer import main as transformer_main
 
 
 class TestSheepdogGen3Transforming(unittest.TestCase):
