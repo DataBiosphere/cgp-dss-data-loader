@@ -1,62 +1,22 @@
 import datetime
-import json
-import os
-import tempfile
-import time
 import unittest
 import uuid
-from contextlib import contextmanager
 from pathlib import Path
 
-import hca
 import requests
 
 from tests import eventually, ignore_resource_warnings, message
-
-from scripts.cgp_data_loader import main as cgp_data_loader_main
-
+from tests.abstract_loader_test import AbstractLoaderTest
 
 TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
 
-class TestGen3InputFormatLoading(unittest.TestCase):
+class TestGen3Loader(AbstractLoaderTest, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.dss_client = hca.dss.DSSClient()
-        cls.dss_client.host = 'https://hca-dss-4.ucsc-cgp-dev.org/v1'
-        cls.dss_endpoint = os.getenv('TEST_DSS_ENDPOINT', cls.dss_client.host)
-        cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'mbaumann-dss-staging')
-
-    @staticmethod
-    @contextmanager
-    def _tmp_json_file(json_input_file, guid, file_guid, file_version):
-        # copy the contents of json_input_file to tmp_json
-        # but change 'bundle_did' to a new guid
-        with open(json_input_file, 'r') as jsonFile:
-            json_contents = json.load(jsonFile)
-        json_contents[0]['bundle_did'] = guid
-        json_contents[0]['manifest'][0]['did'] = file_guid
-        for file_info in json_contents[0]['manifest']:
-            file_info['updated_datetime'] = file_version
-        with tempfile.NamedTemporaryFile() as jsonFile:
-            with open(jsonFile.name, 'w') as fh:
-                json.dump(json_contents, fh)
-            yield jsonFile.name
-
-    def _load_file(self, tmp_json):
-        """run the load script and clean up after ourselves"""
-        # upload the data bundle to the DSS
-        args = ['--no-dry-run',
-                '--dss-endpoint',
-                f'{self.dss_endpoint}',
-                '--staging-bucket',
-                f'{self.staging_bucket}',
-                'gen3',
-                '--json-input-file',
-                f'{tmp_json}']
-        cgp_data_loader_main(args)
+        cls.loader_type = 'gen3'
 
     def test_gen3_loading_nested_metadata(self):
         self._test_gen3_loading_from_cli(TEST_DATA_PATH / 'gen3_sample_input_nested_metadata.json')
