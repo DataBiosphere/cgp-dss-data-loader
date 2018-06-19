@@ -13,6 +13,7 @@ import jsonschema
 import requests
 
 from loader.schemas import standard_schema
+from loader.standard_loader import SCHEMA_URL
 from scripts.cgp_data_loader import main as cgp_data_loader_main
 from tests import eventually, ignore_resource_warnings, message
 
@@ -30,7 +31,7 @@ class TestStandardInputFormatLoading(unittest.TestCase):
         cls.staging_bucket = os.getenv("DSS_S3_STAGING_BUCKET", "mbaumann-dss-staging")
         cls.test_file = TEST_DATA_PATH / 'gen3_sample_input_standard_metadata.json'
 
-    def test_test_data_matches_schema(self):
+    def test_data_matches_schema(self):
         """This is a sanity check to make sure that the test data matches the agreed upon schema"""
         test_json = json.loads(self.test_file.read_text())
         for bundle in test_json:
@@ -44,7 +45,7 @@ class TestStandardInputFormatLoading(unittest.TestCase):
     def _tmp_json_file(json_input_file, guid, file_guid, file_version):
         """Yields a temporary test file with identifying information changed"""
 
-        def change_info(in_json, guid, file_guid, file_verison):
+        def change_info(in_json, guid, file_guid, file_version):
             only_bundle = in_json[0]
             data_bundle = only_bundle['data_bundle']
             data_objects = only_bundle['data_objects']
@@ -106,7 +107,7 @@ class TestStandardInputFormatLoading(unittest.TestCase):
         # mint a new 'bundle_did'
         guid = str(uuid.uuid4())
         # make new guid for first file
-        file_guid = str(uuid.uuid4())
+        file_guid = f'dg.4503/{str(uuid.uuid4())}'
         # we want a new version of the file to be uploaded
         file_version = datetime.datetime.now(datetime.timezone.utc).isoformat()
         self._test_gen3_loading(test_json, guid, file_guid, file_version)
@@ -150,6 +151,13 @@ class TestStandardInputFormatLoading(unittest.TestCase):
                         message("Verify that the file guid is stored")
                         file_ref_json = self.dss_client.get_file(uuid=f['uuid'], version=f['version'], replica='aws')
                         found_matching_file = found_matching_file or file_ref_json['aliases'][0] == file_guid
+                    else:
+                        message("Check that metadata file is indexed and matches the output schema")
+                        assert f['indexed'] is True
+                        file_ref_json = self.dss_client.get_file(uuid=f['uuid'], version=f['version'], replica='aws')
+                        schema = requests.get(SCHEMA_URL).json()
+                        jsonschema.validate(file_ref_json, schema)
+
             assert found_matching_file
 
 
