@@ -1,6 +1,10 @@
 from loader.base_loader import DssUploader, MetadataFileUploader
 
 
+SCHEMA_URL = ('https://raw.githubusercontent.com/DataBiosphere/metadata-schema/master/'
+              'json_schema/cgp/gen3/2.0.0/cgp_gen3_metadata.json')
+
+
 class StandardFormatBundleUploader:
     def __init__(self, dss_uploader: DssUploader, metadata_file_uploader: MetadataFileUploader) -> None:
         self.dss_uploader = dss_uploader
@@ -8,38 +12,22 @@ class StandardFormatBundleUploader:
 
     @staticmethod
     def _parse_bundle(bundle: dict) -> tuple:
-        try:
-            bundle_uuid = bundle['bundle_did']
-        except KeyError:
-            bundle_uuid = uuid.uuid4()
-        try:
-            metadata_dict = bundle['metadata']
-        except KeyError:
-            metadata_dict = {key: bundle[key] for key in ['aliquot', 'sample', 'core_metadata']}
-        file_manifest = bundle['manifest']
-        return bundle_uuid, metadata_dict, file_manifest
+        data_bundle = bundle['data_bundle']
+        bundle_uuid = data_bundle['id']
+        metadata_dict = data_bundle['user_metadata']
+        data_objects = bundle['data_objects']
+        return bundle_uuid, metadata_dict, data_objects
 
     @staticmethod
     def _get_cloud_urls(file_info: dict):
-        try:
-            # this is the old format
-            return {file_info[key] for key in ['s3url', 'gsurl']}
-        except KeyError:
-            # this is the format that the transformer returns
-            return {url_dict['url'] for url_dict in file_info['urls']}
+        return {url_dict['url'] for url_dict in file_info['urls']}
 
     @staticmethod
-    def _get_file_ids(file_info: dict):
-        # backwards compatible for pre-guid support
-        if 'did' in file_info.keys():
-            return file_info['did'], file_info['did']
-        # new way (such as from transformer) where we have guids now
-        else:
-            file_id = file_info['id']
-            return file_id.split('/')[1], file_id
+    def _get_file_ids(file_guid: str):
+        return file_guid.split('/')[1]
 
     def _load_bundle(self, bundle: dict):
-        bundle_uuid, metadata_dict, file_manifest = self._parse_bundle(bundle)
+        bundle_uuid, metadata_dict, data_objects = self._parse_bundle(bundle)
         file_info_list = []
 
         # load metadata
@@ -51,9 +39,10 @@ class StandardFormatBundleUploader:
         file_info_list.append(dict(uuid=file_uuid, version=file_version, name=filename, indexed=True))
 
         # load data files by reference
-        for file_info in file_manifest:
+        for file_guid in data_objects:
+            file_info = data_objects[file_guid]
             cloud_urls = self._get_cloud_urls(file_info)
-            file_uuid, file_guid = self._get_file_ids(file_info)
+            file_uuid = self._get_file_ids(file_guid)
             file_uuid, file_version, filename = \
                 self.dss_uploader.upload_cloud_file_by_reference(file_info['name'],
                                                                  # use did for uuid for now. will probably have to
@@ -62,7 +51,7 @@ class StandardFormatBundleUploader:
                                                                  cloud_urls,
                                                                  bundle_uuid,
                                                                  file_guid,
-                                                                 file_version=file_info["updated_datetime"])
+                                                                 file_version=file_info["updated"])
             file_info_list.append(dict(uuid=file_uuid, version=file_version, name=filename, indexed=False))
 
         # load bundle

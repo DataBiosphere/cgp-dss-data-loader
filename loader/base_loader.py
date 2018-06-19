@@ -213,7 +213,7 @@ class DssUploader:
         :param value: A dictionary representing the JSON content of the file to be created.
         :param filename: The basename of the file in the bucket.
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
-        :param An RFC4122-compliant UUID to be used to identify the bundle containing the file
+        :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param content_type: Content description e.g. "application/json; dss-type=fileref".
         :param file_version: a RFC3339 compliant datetime string
         :return: file_uuid: str, file_version: str, filename: str
@@ -412,6 +412,8 @@ class MetadataFileUploader:
             metadata = json.load(fh)
         return self.load_dict(metadata, filename, schema_url, bundle_uuid)
 
-    def load_dict(self, metadata: dict, filename: str, schema_url: str, bundle_uuid: str) -> tuple:
+    # TODO: we should maybe pass the file_version parameter, but doing so could break tests so we're waiting a bit
+    def load_dict(self, metadata: dict, filename: str, schema_url: str, bundle_uuid: str, file_version=None) -> tuple:
         metadata['describedBy'] = schema_url
-        return self.dss_uploader.upload_dict_as_file(metadata, filename, str(uuid.uuid4()), bundle_uuid)
+        # metadata files don't have file_uuids which is why we have to make it up on the spot
+        return self.dss_uploader.upload_dict_as_file(metadata, filename, str(uuid.uuid4()), bundle_uuid, file_version=file_version)
