@@ -43,12 +43,30 @@ Run:
    
 2. Make sure you are running the virtual environment you set up in the **Setup** instructions.
 
-3. Now we need to transform the data. From the root of the project run:
-   
-   `python transformer/gen3_transformer.py /path/to/topmed_public.json --output-json transformed-topmed-public.json` 
-   
+3. Now we need to transform the data. We can transform to the  outdated gen3 format, or two the new standard format.
+
+    - for the standard format, follow instructions at
+      [newt-transformer](https://github.com/jessebrennan/newt-transformer#transforming-data-from-sheepdog-exporter).
+
+    - for the old gen3 format
+      From the root of the project run:
+
+      ```
+      python transformer/gen3_transformer.py /path/to/topmed_public.json --output-json transformed-topmed-public.json
+      ```
+
 4. Now that we have our new transformed output we can run it with the loader.
 
-   `python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET gen3 --json-input-file transformed-topmed-public.json`
+    If you used the standard transformer use the command:
+
+   ```
+   python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET standard --json-input-file transformed-topmed-public.json
+   ```
+
+   otherwise for the outdated gen3 format run:
+
+   ```
+   python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET gen3 --json-input-file transformed-topmed-public.json
+   ```
    
 5. You did it!
