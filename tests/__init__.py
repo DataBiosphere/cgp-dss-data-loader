@@ -33,6 +33,7 @@ def eventually(timeout_seconds: float, retry_interval_seconds: float, errors: se
 def message(message: str):
     print("{}: {}".format(datetime.datetime.now(), message))
 
+
 def ignore_resource_warnings(test_func):
     # see https://stackoverflow.com/q/26563711/7830612 for justification
     def do_test(self, *args, **kwargs):

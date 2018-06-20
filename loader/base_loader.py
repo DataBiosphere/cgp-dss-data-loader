@@ -186,7 +186,6 @@ class DssUploader:
             if gs_metadata:
                 consolidated_metadata.update(gs_metadata)
             consolidated_metadata['url'] = list(file_cloud_urls)
-            # TODO double check aliases
             consolidated_metadata['aliases'] = [str(guid)]
             return consolidated_metadata
 

@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 import uuid
+import logging
 
 from contextlib import contextmanager
 from pathlib import Path
@@ -16,6 +17,8 @@ from loader.schemas import standard_schema
 from loader.standard_loader import SCHEMA_URL
 from scripts.cgp_data_loader import main as cgp_data_loader_main
 from tests import eventually, ignore_resource_warnings, message
+
+logger = logging.getLogger(__name__)
 
 TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
@@ -82,6 +85,8 @@ class TestStandardInputFormatLoading(unittest.TestCase):
                 f'{self.dss_endpoint}',
                 '--staging-bucket',
                 f'{self.staging_bucket}',
+                '--log',
+                'DEBUG',
                 'standard',
                 '--json-input-file',
                 f'{tmp_json}']

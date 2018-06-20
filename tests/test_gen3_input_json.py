@@ -1,4 +1,5 @@
 import datetime
+import logging
 import unittest
 import uuid
 from pathlib import Path
@@ -7,6 +8,8 @@ import requests
 
 from tests import eventually, ignore_resource_warnings, message
 from tests.abstract_loader_test import AbstractLoaderTest
+
+logging.getLogger(__name__)
 
 TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
