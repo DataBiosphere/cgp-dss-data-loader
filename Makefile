@@ -16,7 +16,7 @@ tests:=$(wildcard tests/test_*.py)
 #   make tests/test_gen3_input_json.py
 
 $(tests): %.py : mypy lint
-	python -m unittest $*.py
+	python -m unittest --verbose $*.py
 
 test: $(tests)
 
