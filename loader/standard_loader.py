@@ -1,4 +1,7 @@
 import logging
+import pprint
+import typing
+from collections import namedtuple
 
 from loader.base_loader import DssUploader, MetadataFileUploader
 
@@ -8,18 +11,27 @@ SCHEMA_URL = ('https://raw.githubusercontent.com/DataBiosphere/metadata-schema/m
               'json_schema/cgp/gen3/2.0.0/cgp_gen3_metadata.json')
 
 
+class ParsedBundle(namedtuple('ParsedBundle', ['bundle_uuid', 'metadata_dict', 'data_objects'])):
+
+    def pprint(self):
+        return pprint.pformat(self, indent=4)
+
 class StandardFormatBundleUploader:
     def __init__(self, dss_uploader: DssUploader, metadata_file_uploader: MetadataFileUploader) -> None:
         self.dss_uploader = dss_uploader
         self.metadata_file_uploader = metadata_file_uploader
 
     @staticmethod
-    def _parse_bundle(bundle: dict) -> tuple:
-        data_bundle = bundle['data_bundle']
-        bundle_uuid = data_bundle['id']
-        metadata_dict = data_bundle['user_metadata']
-        data_objects = bundle['data_objects']
-        return bundle_uuid, metadata_dict, data_objects
+    def _parse_bundle(bundle: dict) -> ParsedBundle:
+        try:
+            data_bundle = bundle['data_bundle']
+            bundle_uuid = data_bundle['id']
+            metadata_dict = data_bundle['user_metadata']
+            data_objects = bundle['data_objects']
+        except KeyError:
+            # TODO: Make a bundle parse error that spits back whatever info we can get about the bundle
+            raise
+        return ParsedBundle(bundle_uuid, metadata_dict, data_objects)
 
     @staticmethod
     def _get_cloud_urls(file_info: dict):
@@ -29,9 +41,8 @@ class StandardFormatBundleUploader:
     def _get_file_ids(file_guid: str):
         return file_guid.split('/')[1]
 
-    def _load_bundle(self, bundle: dict):
-        bundle_uuid, metadata_dict, data_objects = self._parse_bundle(bundle)
-        logger.info(f'Loading bundle with uuid {bundle_uuid}')
+    def _load_bundle(self, bundle_uuid, metadata_dict, data_objects):
+        logger.info(f'Attempting to load bundle with uuid {bundle_uuid}')
         file_info_list = []
 
         # load metadata
@@ -52,7 +63,7 @@ class StandardFormatBundleUploader:
             file_uuid = self._get_file_ids(file_guid)
             file_version = file_info['updated']
             cloud_urls = self._get_cloud_urls(file_info)
-            logger.debug(f'Uploading data file: {filename} with uuid:version {file_uuid}:{file_version}...')
+            logger.debug(f'Attempting to upload data file: {filename} with uuid:version {file_uuid}:{file_version}...')
             file_uuid, file_version, filename = \
                 self.dss_uploader.upload_cloud_file_by_reference(filename,
                                                                  # use did for uuid for now. will probably have to
@@ -62,13 +73,49 @@ class StandardFormatBundleUploader:
                                                                  bundle_uuid,
                                                                  file_guid,
                                                                  file_version=file_version)
-            logger.debug(f'...Uploaded data file: {filename} with uuid:version {file_uuid}:{file_version}')
+            logger.debug(f'...Successfully uploaded data file: {filename} with uuid:version {file_uuid}:{file_version}')
             file_info_list.append(dict(uuid=file_uuid, version=file_version, name=filename, indexed=False))
 
         # load bundle
         self.dss_uploader.load_bundle(file_info_list, bundle_uuid)
 
     def load_all_bundles(self, input_json: list):
-        logger.info(f'Going to load {len(input_json)} bundles')
-        for bundle in input_json:
-            self._load_bundle(bundle)
+        logger.info(f'Going to load {len(input_json)} bundle{"" if len(input_json) == 1 else "s"}')
+        bundles_loaded: typing.List[dict] = []
+        bundles_failed_unparsed: typing.List[dict] = []
+        bundles_failed_parsed: typing.List[ParsedBundle] = []
+        try:
+            for count, bundle in enumerate(input_json):
+                logger.info(f'Attempting to load bundle {count + 1}')
+                try:
+                    parsed_bundle = self._parse_bundle(bundle)
+                except Exception:
+                    logger.exception(f'Could not parse bundle {count + 1}')
+                    logger.debug(f'Bundle details: \n{pprint.pformat(bundle)}')
+                    bundles_failed_unparsed.append(bundle)
+                    continue
+                try:
+                    self._load_bundle(*parsed_bundle)
+                except Exception:
+                    logger.exception(f'Error loading bundle {parsed_bundle.bundle_uuid}')
+                    logger.debug(f'Bundle details: \n{parsed_bundle.pprint()}')
+                    bundles_failed_parsed.append(parsed_bundle)
+                    continue
+                bundles_loaded.append(bundle)
+                logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
+        except KeyboardInterrupt:
+            logger.exception('Loading canceled with keyboard interrupt')
+        finally:
+            bundles_unattempted = len(input_json) \
+                - len(bundles_failed_unparsed) \
+                - len(bundles_failed_parsed) \
+                - len(bundles_loaded)
+            if bundles_unattempted:
+                logger.warning(f'Did not yet attempt to load {bundles_unattempted} bundles')
+            if len(bundles_failed_parsed) > 0 or len(bundles_failed_unparsed) > 0:
+                logger.error(f'Could not parse {len(bundles_failed_unparsed)} bundles')
+                logger.error(f'Could not load {len(bundles_failed_parsed)} bundles')
+                # TODO: ADD COMMAND LINE OPTION TO SAVE ERROR LOG TO FILE https://stackoverflow.com/a/11233293/7830612
+                logger.info(f'Successfully loaded {len(bundles_loaded)} bundles')
+            else:
+                logger.info('Successfully loaded all bundles!')
