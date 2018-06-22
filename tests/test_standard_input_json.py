@@ -24,6 +24,13 @@ TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
 
 class TestStandardInputFormatLoading(unittest.TestCase):
+    # TODO: tests to add:
+    #  - Keyboard interrupt test
+    #  - test unparsable and unloadable bundles
+    #  - test different formats for guids, with prefix, without, etc.
+    #  - test that we can still load if file doesn't have 'updated' metadata
+    #  - test uploading more than just 1 bundle
+    #  - test a minimal json to be added to dss
 
     @classmethod
     def setUpClass(cls):

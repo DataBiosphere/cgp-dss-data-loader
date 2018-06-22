@@ -38,9 +38,9 @@ def main(argv):
     parser.add_argument("--staging-bucket", metavar="STAGING_BUCKET", required=False,
                         default=STAGING_BUCKET_DEFAULT,
                         help="Bucket to stage local files for uploading to DSS")
-    parser.add_argument("-l", "--log", dest="logLevel",
+    parser.add_argument("-l", "--log", dest="log_level",
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                        default="WARNING", help="Set the logging level")
+                        default="INFO", help="Set the logging level")
 
     subparsers = parser.add_subparsers(dest='input_format', help='Input file format')
     input_format = subparsers.add_parser("standard", help='Standard CGP DSS input file format')
@@ -60,7 +60,7 @@ def main(argv):
                                            GOOGLE_PROJECT_ID, options.dry_run)
     metadata_file_uploader = base_loader.MetadataFileUploader(dss_uploader)
 
-    logging.basicConfig(level=logging.getLevelName(options.logLevel),
+    logging.basicConfig(level=logging.getLevelName(options.log_level),
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     logging.getLogger(__name__)
     suppress_verbose_logging()

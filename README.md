@@ -43,7 +43,7 @@ Run:
    
 2. Make sure you are running the virtual environment you set up in the **Setup** instructions.
 
-3. Now we need to transform the data. We can transform to the  outdated gen3 format, or two the new standard format.
+3. Now we need to transform the data. We can transform to the  outdated gen3 format, or to the new standard format.
 
     - for the standard format, follow instructions at
       [newt-transformer](https://github.com/jessebrennan/newt-transformer#transforming-data-from-sheepdog-exporter).

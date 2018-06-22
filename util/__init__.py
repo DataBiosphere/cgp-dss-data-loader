@@ -2,7 +2,7 @@ import json
 import logging
 
 
-def load_json_from_file(input_file_path: str) -> dict:
+def load_json_from_file(input_file_path: str):
     with open(input_file_path) as fh:
         return json.load(fh)
 

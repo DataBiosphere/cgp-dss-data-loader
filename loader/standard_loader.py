@@ -1,7 +1,9 @@
 import logging
 import pprint
+import re
 import typing
 from collections import namedtuple
+from typing import Set
 
 from loader.base_loader import DssUploader, MetadataFileUploader
 
@@ -34,12 +36,26 @@ class StandardFormatBundleUploader:
         return ParsedBundle(bundle_uuid, metadata_dict, data_objects)
 
     @staticmethod
-    def _get_cloud_urls(file_info: dict):
-        return {url_dict['url'] for url_dict in file_info['urls']}
+    def _get_file_uuid(file_guid: str):
+        uuid_regex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+        result = uuid_regex.findall(file_guid.lower())
+        if result is None:
+            raise ValueError(f'Misformatted file_guid: {file_guid} should contain a uuid.')
+        if len(result) != 1:
+            raise ValueError(f'Misformatted file_guid: {file_guid} contains multiple uuids. Only one was expected.')
+        return result[0]
 
     @staticmethod
-    def _get_file_ids(file_guid: str):
-        return file_guid.split('/')[1]
+    def _get_file_version(file_info: dict):
+        """Since date updated is optional, we default to date created when it's not updated"""
+        try:
+            return file_info['updated']
+        except KeyError:
+            return file_info['created']
+
+    @staticmethod
+    def _get_cloud_urls(file_info: dict):
+        return {url_dict['url'] for url_dict in file_info['urls']}
 
     def _load_bundle(self, bundle_uuid, metadata_dict, data_objects):
         logger.info(f'Attempting to load bundle with uuid {bundle_uuid}')
@@ -60,14 +76,12 @@ class StandardFormatBundleUploader:
         for file_guid in data_objects:
             file_info = data_objects[file_guid]
             filename = file_info['name']
-            file_uuid = self._get_file_ids(file_guid)
-            file_version = file_info['updated']
+            file_uuid = self._get_file_uuid(file_guid)
+            file_version = self._get_file_version(file_info)
             cloud_urls = self._get_cloud_urls(file_info)
             logger.debug(f'Attempting to upload data file: {filename} with uuid:version {file_uuid}:{file_version}...')
             file_uuid, file_version, filename = \
                 self.dss_uploader.upload_cloud_file_by_reference(filename,
-                                                                 # use did for uuid for now. will probably have to
-                                                                 # extract from guid (did) in the future
                                                                  file_uuid,
                                                                  cloud_urls,
                                                                  bundle_uuid,
@@ -79,7 +93,7 @@ class StandardFormatBundleUploader:
         # load bundle
         self.dss_uploader.load_bundle(file_info_list, bundle_uuid)
 
-    def load_all_bundles(self, input_json: list):
+    def load_all_bundles(self, input_json: typing.List[dict]):
         logger.info(f'Going to load {len(input_json)} bundle{"" if len(input_json) == 1 else "s"}')
         bundles_loaded: typing.List[dict] = []
         bundles_failed_unparsed: typing.List[dict] = []
