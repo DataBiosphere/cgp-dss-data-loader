@@ -18,7 +18,10 @@ class ParsedBundle(namedtuple('ParsedBundle', ['bundle_uuid', 'metadata_dict', '
     def pprint(self):
         return pprint.pformat(self, indent=4)
 
+
 class StandardFormatBundleUploader:
+    _uuid_regex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+
     def __init__(self, dss_uploader: DssUploader, metadata_file_uploader: MetadataFileUploader) -> None:
         self.dss_uploader = dss_uploader
         self.metadata_file_uploader = metadata_file_uploader
@@ -35,10 +38,9 @@ class StandardFormatBundleUploader:
             raise
         return ParsedBundle(bundle_uuid, metadata_dict, data_objects)
 
-    @staticmethod
-    def _get_file_uuid(file_guid: str):
-        uuid_regex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
-        result = uuid_regex.findall(file_guid.lower())
+    @classmethod
+    def _get_file_uuid(cls, file_guid: str):
+        result = cls._uuid_regex.findall(file_guid.lower())
         if result is None:
             raise ValueError(f'Misformatted file_guid: {file_guid} should contain a uuid.')
         if len(result) != 1:
@@ -118,6 +120,7 @@ class StandardFormatBundleUploader:
                 bundles_loaded.append(bundle)
                 logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
         except KeyboardInterrupt:
+            # The bundle that was being processed durng the iterrupt isn't recorded anywhere
             logger.exception('Loading canceled with keyboard interrupt')
         finally:
             bundles_unattempted = len(input_json) \
