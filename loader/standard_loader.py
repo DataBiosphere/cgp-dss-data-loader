@@ -13,14 +13,24 @@ SCHEMA_URL = ('https://raw.githubusercontent.com/DataBiosphere/metadata-schema/m
               'json_schema/cgp/gen3/2.0.0/cgp_gen3_metadata.json')
 
 
-class ParsedBundle(namedtuple('ParsedBundle', ['bundle_uuid', 'metadata_dict', 'data_objects'])):
+class ParseError(Exception):
+    """To be thrown any time a bundle doesn't contain an expected field"""
 
+
+class ParsedBundle(namedtuple('ParsedBundle', ['bundle_uuid', 'metadata_dict', 'data_objects'])):
     def pprint(self):
         return pprint.pformat(self, indent=4)
 
 
 class StandardFormatBundleUploader:
     _uuid_regex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+    # adapted from http://mattallan.org/posts/rfc3339-date-time-validation/
+    _rfc3339_regex = re.compile('^(?P<fullyear>\d{4})'
+                                '-(?P<month>0[1-9]|1[0-2])'
+                                '-(?P<mday>0[1-9]|[12][0-9]|3[01])'
+                                'T(?P<hour>[01][0-9]|2[0-3]):(?P<minute>[0-5][0-9]):(?P<second>[0-5][0-9]|60)'
+                                '(?P<secfrac>\.[0-9]+)'
+                                '?(Z|(\+|-)(?P<offset_hour>[01][0-9]|2[0-3]):(?P<offset_minute>[0-5][0-9]))$')
 
     def __init__(self, dss_uploader: DssUploader, metadata_file_uploader: MetadataFileUploader) -> None:
         self.dss_uploader = dss_uploader
@@ -34,30 +44,51 @@ class StandardFormatBundleUploader:
             metadata_dict = data_bundle['user_metadata']
             data_objects = bundle['data_objects']
         except KeyError:
-            # TODO: Make a bundle parse error that spits back whatever info we can get about the bundle
-            raise
+            logger.exception('Failed to parse bundle')
+            raise ParseError(f'Failed to parse bundle')
         return ParsedBundle(bundle_uuid, metadata_dict, data_objects)
 
     @classmethod
     def _get_file_uuid(cls, file_guid: str):
         result = cls._uuid_regex.findall(file_guid.lower())
         if result is None:
-            raise ValueError(f'Misformatted file_guid: {file_guid} should contain a uuid.')
+            raise ParseError(f'Misformatted file_guid: {file_guid} should contain a uuid.')
         if len(result) != 1:
-            raise ValueError(f'Misformatted file_guid: {file_guid} contains multiple uuids. Only one was expected.')
+            raise ParseError(f'Misformatted file_guid: {file_guid} contains multiple uuids. Only one was expected.')
         return result[0]
 
-    @staticmethod
-    def _get_file_version(file_info: dict):
+    @classmethod
+    def _get_file_version(cls, file_info: dict):
         """Since date updated is optional, we default to date created when it's not updated"""
-        try:
-            return file_info['updated']
-        except KeyError:
-            return file_info['created']
+        def parse_version_key(file_info_, key):
+            """return None if version cannot be found"""
+            try:
+                match = cls._rfc3339_regex.fullmatch(file_info_[key])
+                if match is None:
+                    logger.warning(f'Failed to parse file version from date {key}: {file_info_[key]}')
+                    return None
+                return file_info_[key]
+            except KeyError:
+                return None
+        version = parse_version_key(file_info, 'updated')
+        if version is None:
+            version = parse_version_key(file_info, 'created')
+        if version is None:
+            raise ParseError('Either bundle had no updated / created time or it was not rfc3339 compliant')
+        return version
 
     @staticmethod
     def _get_cloud_urls(file_info: dict):
-        return {url_dict['url'] for url_dict in file_info['urls']}
+        if 'urls' not in file_info:
+            raise ParseError(f'URL field not present in file_info: \n{file_info}')
+        urls = file_info['urls']
+        if len(urls) < 1:
+            # FIXME: How many cloud URLs do we ACTUALLY need / expect?
+            raise ParseError(f'Expected at least one cloud url in file_info: \n{file_info}')
+        for url in urls:
+            if 'url' not in url:
+                raise ParseError(f"Expected 'url' as key for urls in file_info: \n{file_info}")
+        return {url_dict['url'] for url_dict in urls}
 
     def _load_bundle(self, bundle_uuid, metadata_dict, data_objects):
         logger.info(f'Attempting to load bundle with uuid {bundle_uuid}')

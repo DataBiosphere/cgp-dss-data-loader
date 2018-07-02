@@ -101,19 +101,7 @@ class TestStandardInputFormatLoading(unittest.TestCase):
 
     @ignore_resource_warnings
     def _test_gen3_loading_from_cli(self, test_json):
-        """
-        Test that a Gen3 JSON format input file can be uploaded to the DSS,
-        and that all of the data files loaded are loaded by reference
-        and set to not be indexed.
-
-        1. Generates a Gen3 JSON input file from a template with a new unique 'bundle_did'
-           and a new 'did' for the first file in the bundle.
-        2. Searches the DSS to make sure it doesn't already exist using the HCA CLI Python bindings.
-        3. Uploads the gen3 json to the DSS.
-        4. Searches the DSS to verify the bundle was uploaded and indexed successfully.
-        5. Assert data files are loaded by reference and set to not be indexed.
-        6. Assert that the new 'did' for the first file in the bundle was found in the results.
-        """
+        """A wrapper for the actual test"""
 
         message("Test that initial loading works successfully")
         # mint a new 'bundle_did'
@@ -129,6 +117,19 @@ class TestStandardInputFormatLoading(unittest.TestCase):
         self._test_gen3_loading(test_json, guid, file_guid, file_version)
 
     def _test_gen3_loading(self, test_json, bundle_guid, file_guid, file_version):
+        """
+        Test that a Gen3 JSON format input file can be uploaded to the DSS,
+        and that all of the data files loaded are loaded by reference
+        and set to not be indexed.
+
+        1. Generates a Gen3 JSON input file from a template with a new unique 'bundle_did'
+           and a new 'did' for the first file in the bundle.
+        2. Searches the DSS to make sure it doesn't already exist using the HCA CLI Python bindings.
+        3. Uploads the gen3 json to the DSS.
+        4. Searches the DSS to verify the bundle was uploaded and indexed successfully.
+        5. Assert data files are loaded by reference and set to not be indexed.
+        6. Assert that the new 'did' for the first file in the bundle was found in the results.
+        """
 
         @eventually(timeout_seconds=5.0, retry_interval_seconds=1.0)
         def _search_for_bundle(bundle_uuid):
