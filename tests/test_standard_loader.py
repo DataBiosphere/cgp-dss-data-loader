@@ -1,31 +1,24 @@
 import datetime
+import logging
 import unittest
 import uuid
 
 from loader.standard_loader import StandardFormatBundleUploader, ParsedBundle, ParseError
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.getLogger(__name__)
+
 
 class TestStandardLoader(unittest.TestCase):
     """unit tests for loader components"""
 
-    def test_parse_bundle(self):
-        """
-        Check that our basic parsing of the bundle works.
-
-        This won't cover everything though because there are still some implicit assumptions
-        about a bundle as its being loaded such as ...?? version info? name? not sure, should double check.
-        """
-        bundle = {}
-        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
-        data_bundle = {}
-        bundle['data_bundle'] = data_bundle
-        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
-        data_bundle['id'] = 'anything'
-        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
-        data_bundle['user_metadata'] = 'a thing'
-        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
-        bundle['data_objects'] = [1, 2, 3]
-        self.assertTrue(type(StandardFormatBundleUploader._parse_bundle(bundle)) == ParsedBundle)
+    def setUp(self):
+        self.minimal_file_info_guid = f'dg.405/{uuid.uuid4()}'
+        self.minimal_file_info = {'name': 'buried_treasure_map',
+                                  'created': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                  'urls': [{'url': 's3://desert/island/under/palm'},
+                                           {'url': 'gs://captains/quarters/bottom/drawer'}]}
 
     def test_get_file_uuid(self):
         """
@@ -79,4 +72,33 @@ class TestStandardLoader(unittest.TestCase):
         urls.append({'url': good_url})
         self.assertTrue(good_url in StandardFormatBundleUploader._get_cloud_urls(file_info))
 
+    def test_parse_bundle(self):
+        """
+        Check that our basic parsing of the bundle works.
 
+        This won't cover everything though because there are still some implicit assumptions
+        about a bundle as its being loaded such as ...?? version info? name? not sure, should double check.
+        """
+        bundle = {}
+        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
+        data_bundle = {}
+        bundle['data_bundle'] = data_bundle
+        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
+        data_bundle['id'] = 'anything'
+        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
+        data_bundle['user_metadata'] = 'a thing'
+        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
+        bundle['data_objects'] = 'not a list of objects'
+        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
+        bundle['data_objects'] = [1, 2, 3]
+        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
+        file_info = {'name': 'burried_treasure_map'}
+        bundle['data_objects'] = {self.minimal_file_info_guid: file_info}
+        self.assertRaises(ParseError, StandardFormatBundleUploader._parse_bundle, bundle)
+        file_info.update(self.minimal_file_info)
+        self.assertTrue(type(StandardFormatBundleUploader._parse_bundle(bundle)) == ParsedBundle)
+
+    def test_load_bundle_minimal(self):
+        """Try and load a minimally formed bundle"""
+        # make a minimal bundle
+        # call _load_bundle

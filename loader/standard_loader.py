@@ -17,7 +17,17 @@ class ParseError(Exception):
     """To be thrown any time a bundle doesn't contain an expected field"""
 
 
-class ParsedBundle(namedtuple('ParsedBundle', ['bundle_uuid', 'metadata_dict', 'data_objects'])):
+# local representation of data necessary to upload a single file
+ParsedDataFile = namedtuple('ParsedDataFile', ['filename',
+                                               'file_uuid',
+                                               'cloud_urls',
+                                               'bundle_uuid',
+                                               'file_guid',
+                                               'file_version'])
+
+
+class ParsedBundle(namedtuple('ParsedBundle', ['bundle_uuid', 'metadata_dict', 'data_files'])):
+
     def pprint(self):
         return pprint.pformat(self, indent=4)
 
@@ -35,18 +45,6 @@ class StandardFormatBundleUploader:
     def __init__(self, dss_uploader: DssUploader, metadata_file_uploader: MetadataFileUploader) -> None:
         self.dss_uploader = dss_uploader
         self.metadata_file_uploader = metadata_file_uploader
-
-    @staticmethod
-    def _parse_bundle(bundle: dict) -> ParsedBundle:
-        try:
-            data_bundle = bundle['data_bundle']
-            bundle_uuid = data_bundle['id']
-            metadata_dict = data_bundle['user_metadata']
-            data_objects = bundle['data_objects']
-        except KeyError:
-            logger.exception('Failed to parse bundle')
-            raise ParseError(f'Failed to parse bundle')
-        return ParsedBundle(bundle_uuid, metadata_dict, data_objects)
 
     @classmethod
     def _get_file_uuid(cls, file_guid: str):
@@ -90,7 +88,36 @@ class StandardFormatBundleUploader:
                 raise ParseError(f"Expected 'url' as key for urls in file_info: \n{file_info}")
         return {url_dict['url'] for url_dict in urls}
 
-    def _load_bundle(self, bundle_uuid, metadata_dict, data_objects):
+    @classmethod
+    def _parse_bundle(cls, bundle: dict) -> ParsedBundle:
+        try:
+            data_bundle = bundle['data_bundle']
+            bundle_uuid = data_bundle['id']
+            metadata_dict = data_bundle['user_metadata']
+            data_objects = bundle['data_objects']
+        except KeyError:
+            logger.exception('Failed to parse bundle')
+            raise ParseError(f'Failed to parse bundle')
+
+        # parse the files within the bundle
+        parsed_files = []
+        for file_guid in data_objects:
+            try:
+                file_info = data_objects[file_guid]
+                filename = file_info['name']
+            except TypeError or KeyError:
+                logger.exception('Failed to parse bundle')
+                raise ParseError(f'Failed to parse bundle')
+            file_uuid = cls._get_file_uuid(file_guid)
+            file_version = cls._get_file_version(file_info)
+            cloud_urls = cls._get_cloud_urls(file_info)
+            parsed_file = ParsedDataFile(filename, file_uuid, cloud_urls, bundle_uuid, file_guid, file_version)
+            parsed_files.append(parsed_file)
+
+        return ParsedBundle(bundle_uuid, metadata_dict, parsed_files)
+
+    def _load_bundle(self, bundle_uuid, metadata_dict, data_files):
+        """Do the actual loading for an already parsed bundle"""
         logger.info(f'Attempting to load bundle with uuid {bundle_uuid}')
         file_info_list = []
 
@@ -105,13 +132,8 @@ class StandardFormatBundleUploader:
         file_info_list.append(dict(uuid=metadata_file_uuid, version=metadata_file_version,
                                    name=metadata_filename, indexed=True))
 
-        # load data files by reference
-        for file_guid in data_objects:
-            file_info = data_objects[file_guid]
-            filename = file_info['name']
-            file_uuid = self._get_file_uuid(file_guid)
-            file_version = self._get_file_version(file_info)
-            cloud_urls = self._get_cloud_urls(file_info)
+        for data_file in data_files:
+            filename, file_uuid, cloud_urls, bundle_uuid, file_guid, file_version, = data_file
             logger.debug(f'Attempting to upload data file: {filename} with uuid:version {file_uuid}:{file_version}...')
             file_uuid, file_version, filename = \
                 self.dss_uploader.upload_cloud_file_by_reference(filename,
@@ -126,32 +148,62 @@ class StandardFormatBundleUploader:
         # load bundle
         self.dss_uploader.load_bundle(file_info_list, bundle_uuid)
 
+    def _parse_all_bundles(self, input_json,
+                           bundles_parsed: typing.List[ParsedBundle],
+                           bundles_failed_unparsed: typing.List[dict]):
+        """
+        Parses all raw json bundles
+
+        :param input_json: The freshly loaded json
+        :param bundles_parsed: will contain all of the bundles that were successfully parsed
+        :param bundles_failed_unparsed: will contain all of the bundles that were not successfully parsed
+        """
+        if type(input_json) is not list:
+            raise ParseError(f"Json file is misformatted. Expected type: list, actually type {type(input_json)}")
+
+        for count, bundle in enumerate(input_json):
+            try:
+                parsed_bundle = self._parse_bundle(bundle)
+                bundles_parsed.append(parsed_bundle)
+            except ParseError:
+                logger.exception(f'Could not parse bundle {count + 1}')
+                logger.debug(f'Bundle details: \n{pprint.pformat(bundle)}')
+                bundles_failed_unparsed.append(bundle)
+
+    def _load_all_bundles(self, bundles_parsed: typing.List[ParsedBundle],
+                          bundles_loaded: typing.List[ParsedBundle],
+                          bundles_failed_parsed: typing.List[ParsedBundle]):
+        """
+        Loads already parsed bundles
+
+        :param bundles_parsed: the already parsed bundles
+        :param bundles_loaded: will contain all of the bundles that were successfully loaded
+        :param bundles_failed_parsed: will contain all of the bundles that were not successfully loaded
+        """
+        for count, parsed_bundle in enumerate(bundles_parsed):
+            logger.info(f'Attempting to load bundle {count + 1}')
+            try:
+                self._load_bundle(*parsed_bundle)
+            except Exception:
+                logger.exception(f'Error loading bundle {parsed_bundle.bundle_uuid}')
+                logger.debug(f'Bundle details: \n{parsed_bundle.pprint()}')
+                bundles_failed_parsed.append(parsed_bundle)
+                continue
+            bundles_loaded.append(parsed_bundle)
+            logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
+        return bundles_loaded, bundles_failed_parsed
+
     def load_all_bundles(self, input_json: typing.List[dict]):
         logger.info(f'Going to load {len(input_json)} bundle{"" if len(input_json) == 1 else "s"}')
-        bundles_loaded: typing.List[dict] = []
+        bundles_parsed: typing.List[ParsedBundle] = []
         bundles_failed_unparsed: typing.List[dict] = []
+        bundles_loaded: typing.List[ParsedBundle] = []
         bundles_failed_parsed: typing.List[ParsedBundle] = []
         try:
-            for count, bundle in enumerate(input_json):
-                logger.info(f'Attempting to load bundle {count + 1}')
-                try:
-                    parsed_bundle = self._parse_bundle(bundle)
-                except Exception:
-                    logger.exception(f'Could not parse bundle {count + 1}')
-                    logger.debug(f'Bundle details: \n{pprint.pformat(bundle)}')
-                    bundles_failed_unparsed.append(bundle)
-                    continue
-                try:
-                    self._load_bundle(*parsed_bundle)
-                except Exception:
-                    logger.exception(f'Error loading bundle {parsed_bundle.bundle_uuid}')
-                    logger.debug(f'Bundle details: \n{parsed_bundle.pprint()}')
-                    bundles_failed_parsed.append(parsed_bundle)
-                    continue
-                bundles_loaded.append(bundle)
-                logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
+            self._parse_all_bundles(input_json, bundles_parsed, bundles_failed_unparsed)
+            self._load_all_bundles(bundles_parsed, bundles_loaded, bundles_failed_parsed)
         except KeyboardInterrupt:
-            # The bundle that was being processed durng the iterrupt isn't recorded anywhere
+            # The bundle that was being processed during the interrupt isn't recorded anywhere
             logger.exception('Loading canceled with keyboard interrupt')
         finally:
             bundles_unattempted = len(input_json) \
