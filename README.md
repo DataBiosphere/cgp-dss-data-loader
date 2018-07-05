@@ -1,7 +1,7 @@
 # cgp-dss-data-loader
 Simple data loader for CGP HCA Data Store
 
-## Common Setup
+## common setup
 1. **(optional)**  We recommend using a Python 3
    [virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
