@@ -54,13 +54,13 @@ Run:
     If you used the standard transformer use the command:
 
    ```
-   python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET standard --json-input-file transformed-topmed-public.json
+   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET standard --json-input-file transformed-topmed-public.json
    ```
 
    Otherwise for the outdated gen3 format run:
 
    ```
-   python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET gen3 --json-input-file transformed-topmed-public.json
+   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET gen3 --json-input-file transformed-topmed-public.json
    ```
    
 1. You did it!
