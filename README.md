@@ -9,7 +9,7 @@ Simple data loader for CGP HCA Data Store
 
    `pip3 install cgp-dss-data-loader`
 
-## Setup For Development
+## Setup for Development
 1. Clone the repo:
 
    `git clone https://github.com/DataBiosphere/cgp-dss-data-loader.git`
@@ -25,7 +25,7 @@ Simple data loader for CGP HCA Data Store
    `make develop`
 
 ## Running Tests
-run:
+Run:
 
 `make test`
 
@@ -38,27 +38,26 @@ run:
 
 1. Make sure you are running the virtual environment you set up in the **Setup** instructions.
 
-1. Now we need to transform the data. We can transform to the  outdated gen3 format, or to the new standard format.
+1. Now we need to transform the data. We can transform to the outdated gen3 format, or to the new standard format.
 
-    - for the standard format, follow instructions at
+    - For the standard format, follow instructions at
       [newt-transformer](https://github.com/jessebrennan/newt-transformer#transforming-data-from-sheepdog-exporter).
 
-    - for the old gen3 format
-      from the root of the project run:
+    - For the old Gen3 format, run this from the root of the project:
 
       ```
       python transformer/gen3_transformer.py /path/to/topmed_public.json --output-json transformed-topmed-public.json
       ```
 
-1. now that we have our new transformed output we can run it with the loader.
+1. Now that we have our new transformed output we can run it with the loader.
 
-    if you used the standard transformer use the command:
+    If you used the standard transformer use the command:
 
    ```
-   python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET tandard --json-input-file transformed-topmed-public.json
+   python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET standard --json-input-file transformed-topmed-public.json
    ```
 
-   otherwise for the outdated gen3 format run:
+   Otherwise for the outdated gen3 format run:
 
    ```
    python scripts/cgp_data_loader.py --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET gen3 --json-input-file transformed-topmed-public.json
