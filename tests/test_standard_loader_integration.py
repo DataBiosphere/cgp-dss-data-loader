@@ -90,8 +90,6 @@ class TestStandardInputFormatLoading(unittest.TestCase):
                 f'{self.dss_endpoint}',
                 '--staging-bucket',
                 f'{self.staging_bucket}',
-                '--log',
-                'DEBUG',
                 'standard',
                 '--json-input-file',
                 f'{tmp_json}']
