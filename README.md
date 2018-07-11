@@ -24,6 +24,21 @@ Simple data loader for CGP HCA Data Store
 
    `make develop`
 
+## Cloud Credentials Setup
+Because this program uses Amazon Web Services and Google Cloud Platform, you will need to set up credentials
+for both of these before you can run the program.
+
+### AWS credentials
+1. If you haven't already you will need to make an IAM user and create a new access key. Instructions are
+   [here](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html).
+
+1. Next you will need to store your credentials so that Boto can access them. Instructions are
+   [here](https://boto3.readthedocs.io/en/latest/guide/configuration.html).
+
+### GCP credentials
+1. Follow the steps [here](https://cloud.google.com/docs/authentication/getting-started) to set up your Google
+   Credentials.
+
 ## Running Tests
 Run:
 
