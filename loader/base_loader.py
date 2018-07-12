@@ -40,6 +40,10 @@ logger = logging.getLogger(__name__)
 CREATOR_ID = 20
 
 
+class FileURLError(Exception):
+    """Thrown when a file cannot be accessed by the given URl"""
+
+
 class DssUploader:
     def __init__(self, dss_endpoint: str, staging_bucket: str, google_project_id: str, dry_run: bool) -> None:
         """
@@ -97,7 +101,7 @@ class DssUploader:
         :param guid: An optional additional/alternate data identifier/alias to associate with the file
         e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
         :param file_version: a RFC3339 compliant datetime string
-        :return: file_uuid: str, file_version: str, filename: str
+        :return: file_uuid: str, file_version: str, filename: str, already_present
         """
 
         def _create_file_reference(file_cloud_urls: set, guid: str) -> dict:
@@ -124,7 +128,7 @@ class DssUploader:
                 elif url.scheme == "gs":
                     gs_metadata = _get_gs_file_metadata(bucket, key)
                 else:
-                    logger.warning("Unsupported cloud URL scheme: {cloud_url}")
+                    raise FileURLError("Unsupported cloud URL scheme: {cloud_url}")
             return _consolidate_metadata(file_cloud_urls, s3_metadata, gs_metadata, guid)
 
         def _get_s3_file_metadata(bucket: str, key: str) -> dict:
@@ -141,8 +145,9 @@ class DssUploader:
                 metadata['content-type'] = response['ContentType']
                 metadata['s3_etag'] = response['ETag']
                 metadata['size'] = response['ContentLength']
-            except botocore.exceptions.ClientError as e:
-                logger.warning(f"Error accessing s3://{bucket}/{key} Exception: {e}")
+            except Exception:
+                logger.exception("Couldn't access URL")
+                raise FileURLError(f"Error accessing s3://{bucket}/{key}")
             return metadata
 
         def _get_gs_file_metadata(bucket: str, key: str) -> dict:
@@ -160,8 +165,9 @@ class DssUploader:
                 metadata['content-type'] = blob_obj.content_type
                 metadata['crc32c'] = binascii.hexlify(base64.b64decode(blob_obj.crc32c)).decode("utf-8").lower()
                 metadata['size'] = blob_obj.size
-            except Exception as e:
-                logger.warning(f"Error accessing gs://{bucket}/{key} Exception: {e}")
+            except Exception:
+                logger.exception("Couldn't access URL")
+                raise FileURLError(f"Error accessing gs://{bucket}/{key}")
             return metadata
 
         def _consolidate_metadata(file_cloud_urls: set,
@@ -215,7 +221,7 @@ class DssUploader:
         :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param content_type: Content description e.g. "application/json; dss-type=fileref".
         :param file_version: a RFC3339 compliant datetime string
-        :return: file_uuid: str, file_version: str, filename: str
+        :return: file_uuid: str, file_version: str, filename: str, already_present: bool
         """
         tempdir = mkdtemp()
         file_path = "/".join([tempdir, filename])
@@ -243,7 +249,7 @@ class DssUploader:
         :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param content_type: Content type identifier, for example: "application/json; dss-type=fileref".
         :param file_version: a RFC3339 compliant datetime string
-        :return: file_uuid: str, file_version: str, filename: str
+        :return: file_uuid: str, file_version: str, filename: str, already_present: bool
         """
         file_uuid, key = self._upload_local_file_to_staging(path, file_uuid, content_type)
         return self._upload_tagged_cloud_file_to_dss_by_copy(self.staging_bucket,
@@ -345,7 +351,7 @@ class DssUploader:
         :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param file_version: a RFC3339 compliant datetime string
         :param timeout_seconds:  Amount of time to continue attempting an async copy.
-        :return: file_uuid: str, file_version: str, filename: str
+        :return: file_uuid: str, file_version: str, filename: str, file_present: bool
         """
         source_url = f"s3://{source_bucket}/{source_key}"
         filename = self.get_filename_from_key(source_key)
@@ -368,6 +374,12 @@ class DssUploader:
         # and we need this format update when doing load bundle
         file_version = response.json().get('version', "blank")
 
+        # from dss swagger docs:
+        #   > 200 Returned when the file is already present and is identical to the file being uploaded.
+        if response.status_code == requests.codes.ok:
+            already_present = True
+        else:
+            already_present = False
         if response.status_code in (requests.codes.ok, requests.codes.created):
             logger.info("File %s: Sync copy -> %s (%d seconds)",
                         source_url, file_version, (time.time() - copy_start_time))
@@ -377,6 +389,7 @@ class DssUploader:
 
             timeout = time.time() + timeout_seconds
             wait = 1.0
+            # FIXME busy wait could hopefully be replaced with asyncio
             while time.time() < timeout:
                 try:
                     self.dss_client.head_file(uuid=file_uuid, replica="aws", version=file_version)
@@ -394,7 +407,7 @@ class DssUploader:
                 raise RuntimeError("File {}: registration FAILED".format(source_url))
             logger.debug("Successfully uploaded file")
 
-        return file_uuid, file_version, filename
+        return file_uuid, file_version, filename, already_present
 
 
 class MetadataFileUploader:
@@ -411,7 +424,6 @@ class MetadataFileUploader:
             metadata = json.load(fh)
         return self.load_dict(metadata, filename, schema_url, bundle_uuid)
 
-    # TODO: we should maybe pass the file_version parameter, but doing so could break tests so we're waiting a bit
     def load_dict(self, metadata: dict, filename: str, schema_url: str, bundle_uuid: str, file_version=None) -> tuple:
         metadata['describedBy'] = schema_url
         # metadata files don't have file_uuids which is why we have to make it up on the spot

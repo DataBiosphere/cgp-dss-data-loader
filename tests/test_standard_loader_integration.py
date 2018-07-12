@@ -24,11 +24,6 @@ TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
 
 class TestStandardInputFormatLoading(unittest.TestCase):
-    # TODO: tests to add:
-    #  - Keyboard interrupt test
-    #  - test unloadable bundles
-    #  - test uploading more than just 1 bundle
-    #  - test a minimal json to be added to dss
 
     @classmethod
     def setUpClass(cls):
@@ -62,7 +57,6 @@ class TestStandardInputFormatLoading(unittest.TestCase):
 
             # change all references to the file guid
             object_key = data_bundle['data_object_ids'][0]
-            # FIXME file_guid doesn't have url prefix!
             data_bundle['data_object_ids'][0] = file_guid
             data_objects[file_guid] = data_objects[object_key]
             del data_objects[object_key]
