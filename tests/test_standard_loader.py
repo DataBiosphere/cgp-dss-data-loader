@@ -37,8 +37,8 @@ class TestLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dss_client = hca.dss.DSSClient()
-        cls.dss_client.host = 'https://hca-dss-4.ucsc-cgp-dev.org/v1'
         cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
+        cls.dss_client.host = cls.dss_endpoint
         cls.staging_bucket = os.getenv("DSS_S3_STAGING_BUCKET", "mbaumann-dss-staging")
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket,
                                                    GOOGLE_PROJECT_ID, False)
@@ -208,7 +208,7 @@ class TestLoader(unittest.TestCase):
                 'data_bundle': {
                     'id': bundle_uuid,
                     'data_object_ids': file_guid,
-                    'created': tz_utc_now(),  # FIXME is this necessary?????
+                    'created': tz_utc_now(),
                     'user_metadata': {'some': 'stuff',
                                       'more': 'stuff'}
                 },
@@ -217,7 +217,7 @@ class TestLoader(unittest.TestCase):
                         'name': 'minimal_bundle_test_file',
                         'created': file_version,
                         'id': file_guid,
-                        'urls': [{'url': url} for url in cloud_urls]  # FIXME fail if url is bad
+                        'urls': [{'url': url} for url in cloud_urls]
                     }
                 }
             }

@@ -88,7 +88,6 @@ class StandardFormatBundleUploader:
             raise ParseError(f'URL field not present in file_info: \n{file_info}')
         urls = file_info['urls']
         if len(urls) < 1:
-            # FIXME: How many cloud URLs do we ACTUALLY need / expect?
             raise ParseError(f'Expected at least one cloud url in file_info: \n{file_info}')
         for url in urls:
             if 'url' not in url:
@@ -184,6 +183,7 @@ class StandardFormatBundleUploader:
             logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
 
     def load_all_bundles(self, input_json: typing.List[dict]):
+        success = True
         logger.info(f'Going to load {len(input_json)} bundle{"" if len(input_json) == 1 else "s"}')
         try:
             self._parse_all_bundles(input_json)
@@ -198,11 +198,14 @@ class StandardFormatBundleUploader:
                 - len(self.bundles_loaded)
             if bundles_unattempted:
                 logger.warning(f'Did not yet attempt to load {bundles_unattempted} bundles')
+                success = False
             if len(self.bundles_failed_unparsed) > 0:
                 logger.error(f'Could not parse {len(self.bundles_failed_unparsed)} bundles')
+                success = False
             if len(self.bundles_failed_parsed) > 0:
                 logger.error(f'Could not load {len(self.bundles_failed_parsed)} bundles')
+                success = False
                 # TODO: ADD COMMAND LINE OPTION TO SAVE ERROR LOG TO FILE https://stackoverflow.com/a/11233293/7830612
                 logger.info(f'Successfully loaded {len(self.bundles_loaded)} bundles')
-            else:
+            if success:
                 logger.info('Successfully loaded all bundles!')

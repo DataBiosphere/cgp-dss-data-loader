@@ -101,7 +101,7 @@ class DssUploader:
         :param guid: An optional additional/alternate data identifier/alias to associate with the file
         e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
         :param file_version: a RFC3339 compliant datetime string
-        :return: file_uuid: str, file_version: str, filename: str, already_present
+        :return: file_uuid: str, file_version: str, filename: str, already_present: bool
         """
 
         def _create_file_reference(file_cloud_urls: set, guid: str) -> dict:
@@ -373,11 +373,8 @@ class DssUploader:
         file_version = response.json().get('version', "blank")
 
         # from dss swagger docs:
-        #   > 200 Returned when the file is already present and is identical to the file being uploaded.
-        if response.status_code == requests.codes.ok:
-            already_present = True
-        else:
-            already_present = False
+        # 200 Returned when the file is already present and is identical to the file being uploaded.
+        already_present = response.status_code == requests.codes.ok
         if response.status_code in (requests.codes.ok, requests.codes.created):
             logger.info("File %s: Sync copy -> %s (%d seconds)",
                         source_url, file_version, (time.time() - copy_start_time))
@@ -387,7 +384,7 @@ class DssUploader:
 
             timeout = time.time() + timeout_seconds
             wait = 1.0
-            # FIXME busy wait could hopefully be replaced with asyncio
+            # TODO: busy wait could hopefully be replaced with asyncio
             while time.time() < timeout:
                 try:
                     self.dss_client.head_file(uuid=file_uuid, replica="aws", version=file_version)
