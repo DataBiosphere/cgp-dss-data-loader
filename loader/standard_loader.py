@@ -102,9 +102,8 @@ class StandardFormatBundleUploader:
             bundle_uuid = data_bundle['id']
             metadata_dict = data_bundle['user_metadata']
             data_objects = bundle['data_objects']
-        except KeyError:
-            logger.exception('Failed to parse bundle')
-            raise ParseError(f'Failed to parse bundle')
+        except KeyError as e:
+            raise ParseError(f'Failed to parse bundle') from e
 
         # parse the files within the bundle
         parsed_files = []
@@ -112,9 +111,8 @@ class StandardFormatBundleUploader:
             try:
                 file_info = data_objects[file_guid]
                 filename = file_info['name']
-            except TypeError or KeyError:
-                logger.exception('Failed to parse bundle')
-                raise ParseError(f'Failed to parse bundle')
+            except TypeError or KeyError as e:
+                raise ParseError(f'Failed to parse bundle') from e
             file_uuid = cls._get_file_uuid(file_guid)
             file_version = cls._get_file_version(file_info)
             cloud_urls = cls._get_cloud_urls(file_info)

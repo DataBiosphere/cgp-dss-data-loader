@@ -145,9 +145,8 @@ class DssUploader:
                 metadata['content-type'] = response['ContentType']
                 metadata['s3_etag'] = response['ETag']
                 metadata['size'] = response['ContentLength']
-            except Exception:
-                logger.exception("Couldn't access URL")
-                raise FileURLError(f"Error accessing s3://{bucket}/{key}")
+            except Exception as e:
+                raise FileURLError(f"Error accessing s3://{bucket}/{key}") from e
             return metadata
 
         def _get_gs_file_metadata(bucket: str, key: str) -> dict:
@@ -165,9 +164,8 @@ class DssUploader:
                 metadata['content-type'] = blob_obj.content_type
                 metadata['crc32c'] = binascii.hexlify(base64.b64decode(blob_obj.crc32c)).decode("utf-8").lower()
                 metadata['size'] = blob_obj.size
-            except Exception:
-                logger.exception("Couldn't access URL")
-                raise FileURLError(f"Error accessing gs://{bucket}/{key}")
+            except Exception as e:
+                raise FileURLError(f"Error accessing gs://{bucket}/{key}") from e
             return metadata
 
         def _consolidate_metadata(file_cloud_urls: set,
