@@ -182,7 +182,7 @@ class StandardFormatBundleUploader:
             self.bundles_loaded.append(parsed_bundle)
             logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
 
-    def load_all_bundles(self, input_json: typing.List[dict]):
+    def load_all_bundles(self, input_json: typing.List[dict]) -> bool:
         success = True
         logger.info(f'Going to load {len(input_json)} bundle{"" if len(input_json) == 1 else "s"}')
         try:
@@ -209,3 +209,4 @@ class StandardFormatBundleUploader:
                 logger.info(f'Successfully loaded {len(self.bundles_loaded)} bundles')
             if success:
                 logger.info('Successfully loaded all bundles!')
+            return success

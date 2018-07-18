@@ -14,6 +14,8 @@ from loader import base_loader
 from loader.base_loader import FileURLError
 from loader.standard_loader import StandardFormatBundleUploader, ParsedBundle, ParseError, ParsedDataFile
 from scripts.cgp_data_loader import GOOGLE_PROJECT_ID
+from tests import ignore_resource_warnings
+from tests.abstract_loader_test import AbstractLoaderTest
 from util import load_json_from_file
 
 logger = logging.getLogger(__name__)
@@ -31,15 +33,13 @@ def utc_now():
     return datetime.datetime.utcnow().isoformat()
 
 
-class TestLoader(unittest.TestCase):
-    """unit tests for loader parsing components"""
+@ignore_resource_warnings
+class TestLoader(AbstractLoaderTest):
+    """unit tests for standard loader"""
 
     @classmethod
     def setUpClass(cls):
-        cls.dss_client = hca.dss.DSSClient()
-        cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
-        cls.dss_client.host = cls.dss_endpoint
-        cls.staging_bucket = os.getenv("DSS_S3_STAGING_BUCKET", "mbaumann-dss-staging")
+        super().setUpClass()
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket,
                                                    GOOGLE_PROJECT_ID, False)
         cls.metadata_uploader = base_loader.MetadataFileUploader(cls.dss_uploader)
@@ -181,45 +181,50 @@ class TestLoader(unittest.TestCase):
         self.assertEqual(len(self.loader.bundles_failed_unparsed), 0)
         self.assertEqual(len(self.loader.bundles_failed_parsed), 0)
 
-    def _make_minimal_bundle(self, parsed=True):
+    def _make_minimal_bundle(self, parsed=True, files=1):
         bundle_uuid = str(uuid.uuid4())
         metadata_dict = {'some': 'stuff', 'more': 'stuff'}
 
-        file_contents = io.BytesIO(b'This is a very important file.\n'
-                                   b'The content is pretty important but is self referential\n')
-        filename = f'minimal-file-{uuid.uuid4()}'
-        file_uuid = str(uuid.uuid4())
-        file_guid = f'dg.405/{file_uuid}'
-        file_version = tz_utc_now()
-        # we only need one URL, but it needs to be valid
-        cloud_urls = [f's3://{self.bucket_name}/{filename}']
+        data_objects = {}
+        for _ in range(files):
+            file_contents = io.BytesIO(b'This is a very important file.\n'
+                                       b'The content is pretty important but is self referential\n')
+            filename = f'minimal-file-{uuid.uuid4()}'
+            file_uuid = str(uuid.uuid4())
+            file_guid = f'dg.405/{file_uuid}'
+            file_version = tz_utc_now()
+            # we only need one URL, but it needs to be valid
+            cloud_urls = [f's3://{self.bucket_name}/{filename}']
 
-        # do the cloud upload
-        file = self.s3.Object(self.bucket_name, filename)
-        file.put(Body=file_contents)
-        file.Acl().put(ACL='public-read')
+            # do the cloud upload
+            file = self.s3.Object(self.bucket_name, filename)
+            file.put(Body=file_contents)
+            file.Acl().put(ACL='public-read')
+
+            data_objects[file_guid] = ParsedDataFile(filename, file_uuid, cloud_urls,
+                                                     bundle_uuid, file_guid, file_version)
 
         if parsed:
-            return ParsedBundle(bundle_uuid,
-                                metadata_dict,
-                                [ParsedDataFile(filename, file_uuid, cloud_urls, bundle_uuid, file_guid, file_version)])
+            return ParsedBundle(bundle_uuid, metadata_dict, list(data_objects.values()))
         else:
+            dict_objects = {}
+            for filename, file_uuid, cloud_urls, bundle_uuid, file_guid, file_version in data_objects.values():
+                dict_objects[file_guid] = {
+                    'name': filename,
+                    'created': file_version,
+                    'id': file_guid,
+                    'urls': [{'url': url} for url in cloud_urls]
+                }
             minimal = {
                 'data_bundle': {
                     'id': bundle_uuid,
-                    'data_object_ids': file_guid,
+                    # FIXME: THEERE WAS NO TEST FOR DATA_OBJECT_IDS
+                    'data_object_ids': [data_objects.keys()],
                     'created': tz_utc_now(),
                     'user_metadata': {'some': 'stuff',
                                       'more': 'stuff'}
                 },
-                'data_objects': {
-                    file_guid: {
-                        'name': 'minimal_bundle_test_file',
-                        'created': file_version,
-                        'id': file_guid,
-                        'urls': [{'url': url} for url in cloud_urls]
-                    }
-                }
+                'data_objects': dict_objects
             }
             return minimal
 
@@ -230,13 +235,34 @@ class TestLoader(unittest.TestCase):
         """Try and load a minimally formed bundle"""
         self._test_loading_bundles_dict([self._make_minimal_bundle(parsed=False)])
 
+    def test_empty_bundle(self):
+        """Can we load a bundle with no files?"""
+        self._test_loading_bundles_dict([self._make_minimal_bundle(parsed=False, files=0)])
+
     def test_multiple_bundles_dict(self):
         """If one works, how about a few?"""
         self._test_loading_bundles_dict([self._make_minimal_bundle(parsed=False) for _ in range(5)])
 
-    def test_minimal_bundle_parsed(self):
+    def _test_bundles_in_dss(self, bundles: typing.List[ParsedBundle]):
+        """Searches the DSS for the bundles and checks that all the files are there"""
+        for bundle in bundles:
+            bundle_json = self.dss_client.get_bundle(uuid=bundle.bundle_uuid, replica='aws')['bundle']  # type: ignore
+            self.assertEqual(bundle_json['uuid'], bundle.bundle_uuid)
+            loaded_file_uuids = {file_json['uuid'] for file_json in bundle_json['files']}
+            for data_object in bundle.data_files:
+                self.assertTrue(data_object.file_uuid in loaded_file_uuids)
+
+    def test_minimal_bundle_in_dss(self):
         """Try and load a minimally formed bundle"""
-        self.loader._load_bundle(*self._make_minimal_bundle(parsed=True))
+        min_bundle = self._make_minimal_bundle()
+        self.loader._load_bundle(*min_bundle)
+        self._test_bundles_in_dss([min_bundle])
+
+    def test_bigger_bundle_in_dss(self):
+        """Test loading a bundle with several files"""
+        big_bundle = self._make_minimal_bundle(files=4)
+        self.loader._load_bundle(*big_bundle)
+        self._test_bundles_in_dss([big_bundle])
 
     def test_duplicate_file_upload(self):
         """

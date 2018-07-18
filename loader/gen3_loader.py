@@ -73,6 +73,7 @@ class Gen3FormatBundleUploader:
         # load bundle
         self.dss_uploader.load_bundle(file_info_list, bundle_uuid)
 
-    def load_all_bundles(self, input_json: list):
+    def load_all_bundles(self, input_json: list) -> bool:
         for bundle in input_json:
             self._load_bundle(bundle)
+        return True

@@ -13,25 +13,23 @@ import hca
 import jsonschema
 import requests
 
+from loader import base_loader
 from loader.schemas import standard_schema
 from loader.standard_loader import SCHEMA_URL
 from scripts.cgp_data_loader import main as cgp_data_loader_main
 from tests import eventually, ignore_resource_warnings, message
+from tests.abstract_loader_test import AbstractLoaderTest
 
 logger = logging.getLogger(__name__)
 
 TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
 
-class TestStandardInputFormatLoading(unittest.TestCase):
+class TestStandardInputFormatLoading(AbstractLoaderTest):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.dss_client = hca.dss.DSSClient()
-        cls.dss_client.host = 'https://hca-dss-4.ucsc-cgp-dev.org/v1'
-        cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
-        cls.staging_bucket = os.getenv("DSS_S3_STAGING_BUCKET", "mbaumann-dss-staging")
         cls.test_file = TEST_DATA_PATH / 'gen3_sample_input_standard_metadata.json'
 
     def test_data_matches_schema(self):
@@ -121,13 +119,6 @@ class TestStandardInputFormatLoading(unittest.TestCase):
         6. Assert that the new 'did' for the first file in the bundle was found in the results.
         """
 
-        @eventually(timeout_seconds=5.0, retry_interval_seconds=1.0)
-        def _search_for_bundle(bundle_uuid):
-            # Search for the bundle uuid in the DSS and make sure it now exists and uploading was successful
-            search_results = self.dss_client.post_search(es_query={'query': {'term': {'uuid': bundle_uuid}}}, replica='aws')
-            assert search_results['total_hits'] > 0
-            return search_results
-
         message("Search for the bundle uuid in the DSS to make sure it does not exist yet")
         search_results = self.dss_client.post_search(es_query={'query': {'term': {'uuid': bundle_guid}}}, replica='aws')
         assert search_results['total_hits'] == 0
@@ -138,7 +129,7 @@ class TestStandardInputFormatLoading(unittest.TestCase):
             self._load_file(tmp_json)
 
             message("Wait for newly loaded bundle to appear in search results")
-            search_results = _search_for_bundle(bundle_guid)
+            search_results = self._search_for_bundle(bundle_guid)
 
             message("Verify that all of the results (except metadata.json) are file references "
                     "and set to not be indexed")

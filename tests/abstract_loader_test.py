@@ -8,19 +8,27 @@ from pathlib import Path
 import hca
 
 from scripts.cgp_data_loader import main as cgp_data_loader_main
-
+from tests import eventually
 
 TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
 
-class AbstractLoaderTest:
+class AbstractLoaderTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.dss_client = hca.dss.DSSClient()
-        cls.dss_client.host = 'https://hca-dss-4.ucsc-cgp-dev.org/v1'
-        cls.dss_endpoint = os.getenv('TEST_DSS_ENDPOINT', cls.dss_client.host)
-        cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'mbaumann-dss-staging')
+        cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
+        cls.dss_client.host = cls.dss_endpoint
+        cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'commons-dss-upload')
+
+    @eventually(timeout_seconds=5.0, retry_interval_seconds=1.0)
+    def _search_for_bundle(self, bundle_uuid):
+        # Search for the bundle uuid in the DSS and make sure it now exists and uploading was successful
+        search_results = self.dss_client.post_search(es_query={'query': {'term': {'uuid': bundle_uuid}}}, replica='aws')
+        assert search_results['total_hits'] > 0
+        return search_results
 
     @staticmethod
     @contextmanager

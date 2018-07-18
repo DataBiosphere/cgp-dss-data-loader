@@ -65,13 +65,17 @@ def main(argv=sys.argv[1:]):
     logging.getLogger(__name__)
     suppress_verbose_logging()
 
+    success_ = False
     if options.input_format == "standard":
         bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
-        bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file))
+        success_ = bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file))
     elif options.input_format == "gen3":
         bundle_uploader = Gen3FormatBundleUploader(dss_uploader, metadata_file_uploader)
-        bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file))
+        success_ = bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file))
+    return success_
 
 
 if __name__ == '__main__':
-    main()
+    success = main()
+    if not success:
+        exit(1)
