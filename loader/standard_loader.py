@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import pprint
 import re
@@ -167,6 +168,28 @@ class StandardFormatBundleUploader:
                 logger.exception(f'Could not parse bundle {count + 1}')
                 logger.debug(f'Bundle details: \n{pprint.pformat(bundle)}')
                 self.bundles_failed_unparsed.append(bundle)
+
+    def _load_bundle_concurrent(self, count, parsed_bundle, logger=logger):
+        logger.info(f'Attempting to load bundle {count + 1}')
+        try:
+            self._load_bundle(*parsed_bundle)
+        except Exception:
+            logger.exception(f'Error loading bundle {parsed_bundle.bundle_uuid}')
+            logger.debug(f'Bundle details: \n{parsed_bundle.pprint()}')
+            self.bundles_failed_parsed.append(parsed_bundle)
+            return
+        self.bundles_loaded.append(parsed_bundle)
+        logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
+
+    def _load_parsed_bundles_concurrent(self):
+        """Loads already parsed bundles concurrently using threads"""
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # approach for logging: make a new (indexed) logger for each thread.
+            # give a custom handler that writes to list
+            # as futures finish, log their stuff
+            futures = [executor.submit(self._load_bundle_concurrent, count, *parsed_bundle)
+                       for count, parsed_bundle in enumerate(self.bundles_parsed)]
+            concurrent.futures.wait(futures)
 
     def _load_parsed_bundles(self):
         """Loads already parsed bundles"""
