@@ -44,6 +44,10 @@ class FileURLError(Exception):
     """Thrown when a file cannot be accessed by the given URl"""
 
 
+class UnexpectedResponseError(Exception):
+    """Thrown when DSS gives an unexpected response"""
+
+
 class DssUploader:
     def __init__(self, dss_endpoint: str, staging_bucket: str, google_project_id: str, dry_run: bool) -> None:
         """
@@ -375,11 +379,13 @@ class DssUploader:
         # from dss swagger docs:
         # 200 Returned when the file is already present and is identical to the file being uploaded.
         already_present = response.status_code == requests.codes.ok
-        if response.status_code in (requests.codes.ok, requests.codes.created):
+        if response.status_code == requests.codes.created:
             logger.info("File %s: Sync copy -> %s (%d seconds)",
                         source_url, file_version, (time.time() - copy_start_time))
-        else:
-            assert response.status_code == requests.codes.accepted
+        elif response.status_code == requests.codes.ok:
+            logger.info("File %s: Already exists -> %s (%d seconds)",
+                        source_url, file_version, (time.time() - copy_start_time))
+        elif response.status_code == requests.codes.accepted:
             logger.info("File %s: Starting async copy -> %s", source_url, file_version)
 
             timeout = time.time() + timeout_seconds
@@ -401,6 +407,8 @@ class DssUploader:
                 # timed out. :(
                 raise RuntimeError("File {}: registration FAILED".format(source_url))
             logger.debug("Successfully uploaded file")
+        else:
+            raise UnexpectedResponseError(f'Received unexpected response code {response.status_code}')
 
         return file_uuid, file_version, filename, already_present
 
