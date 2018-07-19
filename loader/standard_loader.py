@@ -147,7 +147,7 @@ class StandardFormatBundleUploader:
                                                                  file_guid,
                                                                  file_version=file_version)
             if already_present:
-                logger.info('File already present. No upload necessary.')
+                logger.debug('File already present. No upload necessary.')
             logger.debug(f'...Successfully uploaded data file: {filename} with uuid:version {file_uuid}:{file_version}')
             file_info_list.append(dict(uuid=file_uuid, version=file_version, name=filename, indexed=False))
 
@@ -206,7 +206,8 @@ class StandardFormatBundleUploader:
                 logger.error(f'Could not load {len(self.bundles_failed_parsed)} bundles')
                 success = False
                 # TODO: ADD COMMAND LINE OPTION TO SAVE ERROR LOG TO FILE https://stackoverflow.com/a/11233293/7830612
-                logger.info(f'Successfully loaded {len(self.bundles_loaded)} bundles')
             if success:
                 logger.info('Successfully loaded all bundles!')
+            else:
+                logger.info(f'Successfully loaded {len(self.bundles_loaded)} bundles')
             return success
