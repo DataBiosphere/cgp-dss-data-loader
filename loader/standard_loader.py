@@ -207,7 +207,7 @@ class StandardFormatBundleUploader:
                 success = False
                 # TODO: ADD COMMAND LINE OPTION TO SAVE ERROR LOG TO FILE https://stackoverflow.com/a/11233293/7830612
             if success:
-                logger.info('Successfully loaded all bundles!')
+                logger.info(f'Successfully loaded all {len(self.bundles_loaded)} bundles!')
             else:
                 logger.info(f'Successfully loaded {len(self.bundles_loaded)} bundles')
             return success

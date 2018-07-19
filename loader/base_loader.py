@@ -379,11 +379,11 @@ class DssUploader:
         # from dss swagger docs:
         # 200 Returned when the file is already present and is identical to the file being uploaded.
         already_present = response.status_code == requests.codes.ok
-        if response.status_code == requests.codes.created:
-            logger.info("File %s: Sync copy -> %s (%d seconds)",
-                        source_url, file_version, (time.time() - copy_start_time))
-        elif response.status_code == requests.codes.ok:
+        if response.status_code == requests.codes.ok:
             logger.info("File %s: Already exists -> %s (%d seconds)",
+                        source_url, file_version, (time.time() - copy_start_time))
+        elif response.status_code == requests.codes.created:
+            logger.info("File %s: Sync copy -> %s (%d seconds)",
                         source_url, file_version, (time.time() - copy_start_time))
         elif response.status_code == requests.codes.accepted:
             logger.info("File %s: Starting async copy -> %s", source_url, file_version)
