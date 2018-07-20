@@ -187,7 +187,7 @@ class StandardFormatBundleUploader:
             # approach for logging: make a new (indexed) logger for each thread.
             # give a custom handler that writes to list
             # as futures finish, log their stuff
-            futures = [executor.submit(self._load_bundle_concurrent, count, *parsed_bundle)
+            futures = [executor.submit(self._load_bundle_concurrent, count, parsed_bundle)
                        for count, parsed_bundle in enumerate(self.bundles_parsed)]
             concurrent.futures.wait(futures)
 
@@ -205,12 +205,15 @@ class StandardFormatBundleUploader:
             self.bundles_loaded.append(parsed_bundle)
             logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
 
-    def load_all_bundles(self, input_json: typing.List[dict]) -> bool:
+    def load_all_bundles(self, input_json: typing.List[dict], concurrently: bool=False) -> bool:
         success = True
         logger.info(f'Going to load {len(input_json)} bundle{"" if len(input_json) == 1 else "s"}')
         try:
             self._parse_all_bundles(input_json)
-            self._load_parsed_bundles()
+            if concurrently:
+                self._load_parsed_bundles_concurrent()
+            else:
+                self._load_parsed_bundles()
         except KeyboardInterrupt:
             # The bundle that was being processed during the interrupt isn't recorded anywhere
             logger.exception('Loading canceled with keyboard interrupt')
