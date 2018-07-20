@@ -1,6 +1,5 @@
 import datetime
 import json
-import os
 import tempfile
 import unittest
 import uuid
@@ -9,15 +8,13 @@ import logging
 from contextlib import contextmanager
 from pathlib import Path
 
-import hca
 import jsonschema
 import requests
 
-from loader import base_loader
 from loader.schemas import standard_schema
 from loader.standard_loader import SCHEMA_URL
 from scripts.cgp_data_loader import main as cgp_data_loader_main
-from tests import eventually, ignore_resource_warnings, message
+from tests import ignore_resource_warnings, message
 from tests.abstract_loader_test import AbstractLoaderTest
 
 logger = logging.getLogger(__name__)
