@@ -121,9 +121,9 @@ class StandardFormatBundleUploader:
 
         return ParsedBundle(bundle_uuid, metadata_dict, parsed_files)
 
-    def _load_bundle(self, bundle_uuid, metadata_dict, data_files):
+    def _load_bundle(self, bundle_uuid, metadata_dict, data_files, bundle_num):
         """Do the actual loading for an already parsed bundle"""
-        logger.info(f'Attempting to load bundle with uuid {bundle_uuid}')
+        logger.info(f'Bundle {bundle_num}: Attempting to load. UUID: {bundle_uuid}')
         file_info_list = []
 
         # load metadata, ignore whether the file was already present
@@ -132,14 +132,15 @@ class StandardFormatBundleUploader:
                                                   "metadata.json",
                                                   SCHEMA_URL,
                                                   bundle_uuid)
-        logger.debug(f'Uploaded metadata file: {metadata_filename} with '
+        logger.debug(f'Bundle {bundle_num}: Uploaded metadata file: {metadata_filename} with '
                      f'uuid:version {metadata_file_uuid}:{metadata_file_version}')
         file_info_list.append(dict(uuid=metadata_file_uuid, version=metadata_file_version,
                                    name=metadata_filename, indexed=True))
 
         for data_file in data_files:
             filename, file_uuid, cloud_urls, bundle_uuid, file_guid, file_version, = data_file
-            logger.debug(f'Attempting to upload data file: {filename} with uuid:version {file_uuid}:{file_version}...')
+            logger.debug(f'Bundle {bundle_num}: Attempting to upload data file: {filename} '
+                         f'with uuid:version {file_uuid}:{file_version}...')
             file_uuid, file_version, filename, already_present = \
                 self.dss_uploader.upload_cloud_file_by_reference(filename,
                                                                  file_uuid,
@@ -148,8 +149,9 @@ class StandardFormatBundleUploader:
                                                                  file_guid,
                                                                  file_version=file_version)
             if already_present:
-                logger.debug('File already present. No upload necessary.')
-            logger.debug(f'...Successfully uploaded data file: {filename} with uuid:version {file_uuid}:{file_version}')
+                logger.debug('Bundle {bundle_num}: File {filename} already present. No upload necessary.')
+            logger.debug(f'Bundle {bundle_num}: ...Successfully uploaded data file: {filename} '
+                         f'with uuid:version {file_uuid}:{file_version}')
             file_info_list.append(dict(uuid=file_uuid, version=file_version, name=filename, indexed=False))
 
         # load bundle
@@ -165,28 +167,25 @@ class StandardFormatBundleUploader:
                 parsed_bundle = self._parse_bundle(bundle)
                 self.bundles_parsed.append(parsed_bundle)
             except ParseError:
-                logger.exception(f'Could not parse bundle {count + 1}')
+                logger.exception(f'Could not parse bundle {count}')
                 logger.debug(f'Bundle details: \n{pprint.pformat(bundle)}')
                 self.bundles_failed_unparsed.append(bundle)
 
-    def _load_bundle_concurrent(self, count, parsed_bundle, logger=logger):
-        logger.info(f'Attempting to load bundle {count + 1}')
+    def _load_bundle_concurrent(self, count, parsed_bundle):
+        logger.info(f'Bundle {count}: Attempting to load ')
         try:
-            self._load_bundle(*parsed_bundle)
+            self._load_bundle(*parsed_bundle, count)
         except Exception:
-            logger.exception(f'Error loading bundle {parsed_bundle.bundle_uuid}')
-            logger.debug(f'Bundle details: \n{parsed_bundle.pprint()}')
+            logger.exception(f'Bundle {count}: Error loading. ID: {parsed_bundle.bundle_uuid}')
+            logger.debug(f'Bundle {count} details: \n{parsed_bundle.pprint()}')
             self.bundles_failed_parsed.append(parsed_bundle)
             return
         self.bundles_loaded.append(parsed_bundle)
-        logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
+        logger.info(f'Bundle {count}: Successfully loaded. ID: {parsed_bundle.bundle_uuid}')
 
     def _load_parsed_bundles_concurrent(self):
         """Loads already parsed bundles concurrently using threads"""
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            # approach for logging: make a new (indexed) logger for each thread.
-            # give a custom handler that writes to list
-            # as futures finish, log their stuff
             futures = [executor.submit(self._load_bundle_concurrent, count, parsed_bundle)
                        for count, parsed_bundle in enumerate(self.bundles_parsed)]
             concurrent.futures.wait(futures)
@@ -194,9 +193,9 @@ class StandardFormatBundleUploader:
     def _load_parsed_bundles(self):
         """Loads already parsed bundles"""
         for count, parsed_bundle in enumerate(self.bundles_parsed):
-            logger.info(f'Attempting to load bundle {count + 1}')
+            logger.info(f'Attempting to load bundle {count}')
             try:
-                self._load_bundle(*parsed_bundle)
+                self._load_bundle(*parsed_bundle, count)
             except Exception:
                 logger.exception(f'Error loading bundle {parsed_bundle.bundle_uuid}')
                 logger.debug(f'Bundle details: \n{parsed_bundle.pprint()}')

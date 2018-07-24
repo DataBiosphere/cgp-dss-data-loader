@@ -292,14 +292,14 @@ class TestLoader(AbstractLoaderTest):
     def test_minimal_bundle_in_dss(self):
         """Try and load a minimally formed bundle"""
         min_bundle = self._make_minimal_bundle()
-        self.loader._load_bundle(*min_bundle)
+        self.loader._load_bundle(*min_bundle, 0)
         self._test_bundles_in_dss([min_bundle])
 
     @ignore_resource_warnings
     def test_bigger_bundle_in_dss(self):
         """Test loading a bundle with several files"""
         big_bundle = self._make_minimal_bundle(files=4)
-        self.loader._load_bundle(*big_bundle)
+        self.loader._load_bundle(*big_bundle, 0)
         self._test_bundles_in_dss([big_bundle])
 
     @ignore_resource_warnings
@@ -337,8 +337,8 @@ class TestLoader(AbstractLoaderTest):
         """Make sure a bundle with a invalid URL fails"""
         bundle = self._make_minimal_bundle(parsed=True)
         bundle.data_files[0].cloud_urls[0] = 'https://example.com'
-        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle)
+        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle, 0)
         bundle.data_files[0].cloud_urls[0] = 's3://definatelynotavalidbucketorfile'
-        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle)
+        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle, 1)
         bundle.data_files[0].cloud_urls[0] = 'gs://definatelynotavalidbucketorfile'
-        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle)
+        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle, 2)
