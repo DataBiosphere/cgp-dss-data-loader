@@ -38,6 +38,9 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
     def test_basic_input_format_loading_from_cli(self):
         self._test_gen3_loading_from_cli(self.test_file)
 
+    def test_basic_input_format_loading_from_cli_concurrent(self):
+        self._test_gen3_loading_from_cli(self.test_file, more_args=['--concurrently'])
+
     @staticmethod
     @contextmanager
     def _tmp_json_file(json_input_file, guid, file_guid, file_version):
@@ -71,7 +74,7 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
                 json.dump(fixed_json, fh)
             yield jsonFile.name
 
-    def _load_file(self, tmp_json):
+    def _load_file(self, tmp_json, more_args=None):
         """run the load script and clean up after ourselves"""
         # upload the data bundle to the DSS
         args = ['--no-dry-run',
@@ -82,10 +85,12 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
                 'standard',
                 '--json-input-file',
                 f'{tmp_json}']
+        if more_args:
+            args.extend(more_args)
         cgp_data_loader_main(args)
 
     @ignore_resource_warnings
-    def _test_gen3_loading_from_cli(self, test_json):
+    def _test_gen3_loading_from_cli(self, test_json, more_args=None):
         """A wrapper for the actual test"""
 
         message("Test that initial loading works successfully")
@@ -95,13 +100,13 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
         file_guid = f'dg.4503/{str(uuid.uuid4())}'
         # we want a new version of the file to be uploaded
         file_version = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        self._test_gen3_loading(test_json, guid, file_guid, file_version)
+        self._test_gen3_loading(test_json, guid, file_guid, file_version, more_args=more_args)
 
         message("Test that uploading again will be handled successfully")
         guid = str(uuid.uuid4())
-        self._test_gen3_loading(test_json, guid, file_guid, file_version)
+        self._test_gen3_loading(test_json, guid, file_guid, file_version, more_args=more_args)
 
-    def _test_gen3_loading(self, test_json, bundle_guid, file_guid, file_version):
+    def _test_gen3_loading(self, test_json, bundle_guid, file_guid, file_version, more_args=None):
         """
         Test that a Gen3 JSON format input file can be uploaded to the DSS,
         and that all of the data files loaded are loaded by reference
@@ -123,7 +128,7 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
         message("Prepare test input file to load")
         with self._tmp_json_file(test_json, bundle_guid, file_guid, file_version) as tmp_json:
             message("Load the test input file")
-            self._load_file(tmp_json)
+            self._load_file(tmp_json, more_args=more_args)
 
             message("Wait for newly loaded bundle to appear in search results")
             search_results = self._search_for_bundle(bundle_guid)

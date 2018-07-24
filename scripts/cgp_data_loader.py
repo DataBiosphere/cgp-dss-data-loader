@@ -70,6 +70,7 @@ def main(argv=sys.argv[1:]):
 
     if options.input_format == "standard":
         bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
+        logging.info(f'Uploading {"concurrently" if options.concurrently else "serially"}')
         return bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file), options.concurrently)
     elif options.input_format == "gen3":
         bundle_uploader = Gen3FormatBundleUploader(dss_uploader, metadata_file_uploader)
