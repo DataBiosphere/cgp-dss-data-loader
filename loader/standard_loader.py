@@ -5,6 +5,7 @@ import re
 import typing
 
 from loader.base_loader import DssUploader, MetadataFileUploader
+from util import patch_connection_pools
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +186,7 @@ class StandardFormatBundleUploader:
 
     def _load_parsed_bundles_concurrent(self):
         """Loads already parsed bundles concurrently using threads"""
+        patch_connection_pools(maxsize=256)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [executor.submit(self._load_bundle_concurrent, count, parsed_bundle)
                        for count, parsed_bundle in enumerate(self.bundles_parsed)]
