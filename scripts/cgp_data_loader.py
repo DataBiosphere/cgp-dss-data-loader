@@ -15,9 +15,6 @@ from loader import base_loader
 from loader.standard_loader import StandardFormatBundleUploader
 from util import load_json_from_file, suppress_verbose_logging
 
-DSS_ENDPOINT_DEFAULT = "https://commons-dss.ucsc-cgp-dev.org/v1"
-STAGING_BUCKET_DEFAULT = "commons-dss-upload"
-
 # Google Cloud Access
 # TODO Make GOOGLE_PROJECT_ID configurable via a command-line option
 GOOGLE_PROJECT_ID = "platform-dev-178517"  # For requester pays buckets
@@ -31,9 +28,9 @@ def main(argv=sys.argv[1:]):
                                help="Output actions that would otherwise be performed.")
     dry_run_group.add_argument("--no-dry-run", dest="dry_run", action="store_false",
                                help="Perform the actions.")
-    parser.add_argument("--dss-endpoint", metavar="DSS_ENDPOINT", default=DSS_ENDPOINT_DEFAULT,
+    parser.add_argument("--dss-endpoint", metavar="DSS_ENDPOINT", required=True,
                         help="HCA Data Storage System endpoint to use")
-    parser.add_argument("--staging-bucket", metavar="STAGING_BUCKET", default=STAGING_BUCKET_DEFAULT,
+    parser.add_argument("--staging-bucket", metavar="STAGING_BUCKET", required=True,
                         help="Bucket to stage local files for uploading to DSS")
     parser.add_argument("-l", "--log", dest="log_level",
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
