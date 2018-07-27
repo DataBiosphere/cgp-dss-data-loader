@@ -46,7 +46,7 @@ def main(argv=sys.argv[1:]):
     input_format = subparsers.add_parser("standard", help='Standard CGP DSS input file format')
     input_format.add_argument("--json-input-file", metavar="JSON_INPUT_FILE", required=True,
                               help="Path to the standard JSON format input file")
-    input_format.add_argument('-c', '--concurrently', action='store_true', default=False,
+    input_format.add_argument('--linear', action='store_false', default=True,
                               help='Upload bundles concurrently for a big performance boost')
 
     input_format = subparsers.add_parser("gen3", help='University of Chicago Gen3 input file format')
@@ -70,8 +70,8 @@ def main(argv=sys.argv[1:]):
 
     if options.input_format == "standard":
         bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
-        logging.info(f'Uploading {"concurrently" if options.concurrently else "serially"}')
-        return bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file), options.concurrently)
+        logging.info(f'Uploading {"serially" if options.linear else "concurrently"}')
+        return bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file), not options.linear)
     elif options.input_format == "gen3":
         bundle_uploader = Gen3FormatBundleUploader(dss_uploader, metadata_file_uploader)
         return bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file))

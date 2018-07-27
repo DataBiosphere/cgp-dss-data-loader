@@ -36,10 +36,10 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
             jsonschema.validate(bundle, standard_schema)
 
     def test_basic_input_format_loading_from_cli(self):
-        self._test_gen3_loading_from_cli(self.test_file)
+        self._test_gen3_loading_from_cli(self.test_file, more_args=['--linear'])
 
     def test_basic_input_format_loading_from_cli_concurrent(self):
-        self._test_gen3_loading_from_cli(self.test_file, more_args=['--concurrently'])
+        self._test_gen3_loading_from_cli(self.test_file)
 
     @staticmethod
     @contextmanager

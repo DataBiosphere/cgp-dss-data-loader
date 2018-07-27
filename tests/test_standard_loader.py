@@ -252,6 +252,7 @@ class TestLoader(AbstractLoaderTest):
         Try and load a minimally formed bundle.
 
         Even though this is a concurrent test, nothing is actually running concurrently
+        since there is only one bundle
         """
         self._test_loading_bundles_dict([self._make_minimal_bundle(parsed=False)], concurrently=True)
 
@@ -261,6 +262,7 @@ class TestLoader(AbstractLoaderTest):
         Can we load a bundle with no files?
 
         Even though this is a concurrent test, nothing is actually running concurrently
+        since there are no bundles :)
         """
         self._test_loading_bundles_dict([self._make_minimal_bundle(parsed=False, files=0)], concurrently=True)
 
