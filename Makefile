@@ -1,6 +1,6 @@
 
 include common.mk
-MODULES=loader transformer scripts tests datasets/topmed/topmed_107_open_access
+MODULES=loader scripts tests
 
 all: test
 

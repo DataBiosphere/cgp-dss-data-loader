@@ -82,11 +82,10 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
                 f'{self.dss_endpoint}',
                 '--staging-bucket',
                 f'{self.staging_bucket}',
-                'standard',
-                '--json-input-file',
                 f'{tmp_json}']
         if more_args:
-            args.extend(more_args)
+            # Prepend because positional arg has to be last
+            args = more_args + args
         cgp_data_loader_main(args)
 
     @ignore_resource_warnings

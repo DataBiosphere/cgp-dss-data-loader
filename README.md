@@ -53,29 +53,17 @@ Run:
 
 1. Make sure you are running the virtual environment you set up in the **Setup** instructions.
 
-1. Now we need to transform the data. We can transform to the outdated gen3 format, or to the new standard format.
-
-    - For the standard format, follow instructions at
-      [newt-transformer](https://github.com/jessebrennan/newt-transformer#transforming-data-from-sheepdog-exporter).
-
-    - For the old Gen3 format, run this from the root of the project:
-
-      ```
-      python transformer/gen3_transformer.py /path/to/topmed_public.json --output-json transformed-topmed-public.json
-      ```
+1. Now you will need to transform the data into the 'standard' loader format. Do this using the
+   [newt-transformer](https://github.com/jessebrennan/newt-transformer).
+   You can follow the [common setup](https://github.com/DataBiosphere/newt-transformer#common-setup), then the
+   section for [transforming data from sheepdog](https://github.com/jessebrennan/newt-transformer#transforming-data-from-sheepdog-exporter).
 
 1. Now that we have our new transformed output we can run it with the loader.
 
     If you used the standard transformer use the command:
 
    ```
-   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET standard --json-input-file transformed-topmed-public.json
+   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET transformed-topmed-public.json
    ```
 
-   Otherwise for the outdated gen3 format run:
-
-   ```
-   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET gen3 --json-input-file transformed-topmed-public.json
-   ```
-   
 1. You did it!

@@ -13,7 +13,6 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from loader import base_loader
 from loader.standard_loader import StandardFormatBundleUploader
-from loader.gen3_loader import Gen3FormatBundleUploader
 from util import load_json_from_file, suppress_verbose_logging
 
 DSS_ENDPOINT_DEFAULT = "https://commons-dss.ucsc-cgp-dev.org/v1"
@@ -32,26 +31,18 @@ def main(argv=sys.argv[1:]):
                                help="Output actions that would otherwise be performed.")
     dry_run_group.add_argument("--no-dry-run", dest="dry_run", action="store_false",
                                help="Perform the actions.")
-    parser.add_argument("--dss-endpoint", metavar="DSS_ENDPOINT", required=False,
-                        default=DSS_ENDPOINT_DEFAULT,
+    parser.add_argument("--dss-endpoint", metavar="DSS_ENDPOINT", default=DSS_ENDPOINT_DEFAULT,
                         help="HCA Data Storage System endpoint to use")
-    parser.add_argument("--staging-bucket", metavar="STAGING_BUCKET", required=False,
-                        default=STAGING_BUCKET_DEFAULT,
+    parser.add_argument("--staging-bucket", metavar="STAGING_BUCKET", default=STAGING_BUCKET_DEFAULT,
                         help="Bucket to stage local files for uploading to DSS")
     parser.add_argument("-l", "--log", dest="log_level",
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default="INFO", help="Set the logging level")
+    parser.add_argument('--serial', action='store_false', default=True,
+                        help='Upload bundles serially. This can be useful for debugging')
+    parser.add_argument('input_json', metavar='INPUT_JSON',
+                        help="Path to the standard JSON format input file")
 
-    subparsers = parser.add_subparsers(dest='input_format', help='Input file format')
-    input_format = subparsers.add_parser("standard", help='Standard CGP DSS input file format')
-    input_format.add_argument("--json-input-file", metavar="JSON_INPUT_FILE", required=True,
-                              help="Path to the standard JSON format input file")
-    input_format.add_argument('--serial', action='store_false', default=True,
-                              help='Upload bundles serially. This can be useful for debugging')
-
-    input_format = subparsers.add_parser("gen3", help='University of Chicago Gen3 input file format')
-    input_format.add_argument("--json-input-file", metavar="JSON_INPUT_FILE", required=True,
-                              help="Path to the Gen3 JSON format input file")
     options = parser.parse_args(argv)
 
     # The ACLs on the TOPMed Google buckets are based on user accounts.
@@ -68,13 +59,9 @@ def main(argv=sys.argv[1:]):
     logging.getLogger(__name__)
     suppress_verbose_logging()
 
-    if options.input_format == "standard":
-        bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
-        logging.info(f'Uploading {"serially" if options.serial else "concurrently"}')
-        return bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file), not options.serial)
-    elif options.input_format == "gen3":
-        bundle_uploader = Gen3FormatBundleUploader(dss_uploader, metadata_file_uploader)
-        return bundle_uploader.load_all_bundles(load_json_from_file(options.json_input_file))
+    bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
+    logging.info(f'Uploading {"serially" if options.serial else "concurrently"}')
+    return bundle_uploader.load_all_bundles(load_json_from_file(options.input_json), not options.serial)
 
 
 if __name__ == '__main__':
