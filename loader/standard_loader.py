@@ -5,7 +5,7 @@ import re
 import typing
 
 from loader.base_loader import DssUploader, MetadataFileUploader
-from util import patch_connection_pools
+from util import patch_connection_pools, tz_utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,9 @@ class StandardFormatBundleUploader:
             self.metadata_file_uploader.load_dict(metadata_dict,
                                                   "metadata.json",
                                                   SCHEMA_URL,
-                                                  bundle_uuid)
+                                                  bundle_uuid,
+                                                  # just use current time since there is no better source :/
+                                                  file_version=tz_utc_now())
         logger.debug(f'Bundle {bundle_num}: Uploaded metadata file: {metadata_filename} with '
                      f'uuid:version {metadata_file_uuid}:{metadata_file_version}')
         file_info_list.append(dict(uuid=metadata_file_uuid, version=metadata_file_version,

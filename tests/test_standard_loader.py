@@ -16,20 +16,12 @@ from loader.standard_loader import StandardFormatBundleUploader, ParsedBundle, P
 from scripts.cgp_data_loader import GOOGLE_PROJECT_ID
 from tests import ignore_resource_warnings
 from tests.abstract_loader_test import AbstractLoaderTest
-from util import load_json_from_file
+from util import load_json_from_file, tz_utc_now, utc_now
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
-
-
-def tz_utc_now():
-    return datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-
-def utc_now():
-    return datetime.datetime.utcnow().isoformat()
 
 
 class TestLoader(AbstractLoaderTest):

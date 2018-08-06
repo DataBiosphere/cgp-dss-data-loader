@@ -35,6 +35,8 @@ from google.cloud.storage import Client
 from hca.dss import DSSClient
 from hca.util import SwaggerAPIException
 
+from util import tz_utc_now
+
 logger = logging.getLogger(__name__)
 
 CREATOR_ID = 20
@@ -268,7 +270,11 @@ class DssUploader:
         :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :return: A full qualified bundle id e.g. "{bundle_uuid}.{version}"
         """
-        kwargs = dict(replica="aws", creator_uid=CREATOR_ID, files=file_info_list, uuid=bundle_uuid)
+        kwargs = dict(replica="aws",
+                      creator_uid=CREATOR_ID,
+                      files=file_info_list,
+                      uuid=bundle_uuid,
+                      version=tz_utc_now())
         if not self.dry_run:
             response = self.dss_client.put_bundle(**kwargs)
             version = response['version']

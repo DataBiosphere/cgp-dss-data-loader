@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -33,3 +34,13 @@ def patch_connection_pools(**constructor_kwargs):
             kwargs.update(constructor_kwargs)
             super(MyHTTPSConnectionPool, self).__init__(*args, **kwargs)
     poolmanager.pool_classes_by_scheme['https'] = MyHTTPSConnectionPool
+
+
+def tz_utc_now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def utc_now():
+    return datetime.datetime.utcnow().isoformat()
+
+
