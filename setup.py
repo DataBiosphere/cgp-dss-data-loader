@@ -31,7 +31,7 @@ setup(
                       'crcmod >= 1.7, < 2',
                       'dcplib >= 1.1.0, < 2',
                       'google-cloud-storage >= 1.9.0, < 2',
-                      'hca >= 3.5.1, < 4',
+                      'hca >= 4, < 5',
                       'requests >= 2.18.4, < 3'],
     license='Apache License 2.0',
     include_package_data=True,
