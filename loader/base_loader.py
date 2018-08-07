@@ -30,7 +30,8 @@ import botocore
 import requests
 from boto3.s3.transfer import TransferConfig
 from cloud_blobstore import s3
-from dcplib.checksumming_io import ChecksummingBufferedReader, S3Etag
+from dcplib import s3_multipart
+from dcplib.checksumming_io import ChecksummingBufferedReader
 from google.cloud.storage import Client
 from hca.dss import DSSClient
 from hca.util import SwaggerAPIException
@@ -314,12 +315,14 @@ class DssUploader:
                 return type_
             return "application/octet-stream"
 
-        tx_cfg = TransferConfig(multipart_threshold=S3Etag.etag_stride,
-                                multipart_chunksize=S3Etag.etag_stride)
+        file_size = os.path.getsize(path)
+        multipart_chunksize = s3_multipart.get_s3_multipart_chunk_size(file_size)
+        tx_cfg = TransferConfig(multipart_threshold=s3_multipart.MULTIPART_THRESHOLD,
+                                multipart_chunksize=multipart_chunksize)
         s3 = boto3.resource("s3")
 
         destination_bucket = s3.Bucket(self.staging_bucket)
-        with open(path, "rb") as file_handle, ChecksummingBufferedReader(file_handle) as fh:
+        with open(path, "rb") as file_handle, ChecksummingBufferedReader(file_handle, multipart_chunksize) as fh:
             key_name = "{}/{}".format(file_uuid, os.path.basename(fh.raw.name))
             destination_bucket.upload_fileobj(
                 fh,
