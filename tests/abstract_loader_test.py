@@ -18,10 +18,11 @@ class AbstractLoaderTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.dss_client = hca.dss.DSSClient()
         cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
-        cls.dss_client.host = cls.dss_endpoint
         cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'commons-dss-upload')
+        dss_config = hca.HCAConfig()
+        dss_config['DSSClient'].swagger_url = f'{cls.dss_endpoint}/swagger.json'
+        cls.dss_client = hca.dss.DSSClient(config=dss_config)
 
     @eventually(timeout_seconds=5.0, retry_interval_seconds=1.0)
     def _search_for_bundle(self, bundle_uuid):

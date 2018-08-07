@@ -33,6 +33,7 @@ from cloud_blobstore import s3
 from dcplib import s3_multipart
 from dcplib.checksumming_io import ChecksummingBufferedReader
 from google.cloud.storage import Client
+from hca import HCAConfig
 from hca.dss import DSSClient
 from hca.util import SwaggerAPIException
 
@@ -75,9 +76,9 @@ class DssUploader:
         self.s3_client = boto3.client("s3")
         self.s3_blobstore = s3.S3BlobStore(self.s3_client)
         self.gs_client = Client()
-        os.environ.pop('HCA_CONFIG_FILE', None)
-        self.dss_client = DSSClient()
-        self.dss_client.host = self.dss_endpoint
+        dss_config = HCAConfig()
+        dss_config['DSSClient'].swagger_url = f'{self.dss_endpoint}/swagger.json'
+        self.dss_client = DSSClient(config=dss_config)
 
     def upload_cloud_file_by_reference(self,
                                        filename: str,
