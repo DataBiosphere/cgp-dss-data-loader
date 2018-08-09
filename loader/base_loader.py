@@ -37,7 +37,7 @@ from hca import HCAConfig
 from hca.dss import DSSClient
 from hca.util import SwaggerAPIException
 
-from util import tz_utc_now
+from util import tz_utc_now, monkey_patch_hca_config
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,8 @@ class DssUploader:
         self.s3_client = boto3.client("s3")
         self.s3_blobstore = s3.S3BlobStore(self.s3_client)
         self.gs_client = Client()
-        dss_config = HCAConfig()
+        monkey_patch_hca_config()
+        dss_config = HCAConfig(name='loader')
         dss_config['DSSClient'].swagger_url = f'{self.dss_endpoint}/swagger.json'
         self.dss_client = DSSClient(config=dss_config)
 

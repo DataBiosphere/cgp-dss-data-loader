@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+from hca import HCAConfig
 
 
 def load_json_from_file(input_file_path: str):
@@ -44,3 +45,5 @@ def utc_now():
     return datetime.datetime.utcnow().isoformat()
 
 
+def monkey_patch_hca_config():
+    HCAConfig.__init__ = HCAConfig.__bases__[0].__init__

@@ -9,6 +9,7 @@ import hca
 
 from scripts.cgp_data_loader import main as cgp_data_loader_main
 from tests import eventually
+from util import monkey_patch_hca_config
 
 TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
@@ -20,7 +21,8 @@ class AbstractLoaderTest(unittest.TestCase):
         super().setUpClass()
         cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
         cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'commons-dss-upload')
-        dss_config = hca.HCAConfig()
+        monkey_patch_hca_config()
+        dss_config = hca.HCAConfig(name='loader-test')
         dss_config['DSSClient'].swagger_url = f'{cls.dss_endpoint}/swagger.json'
         cls.dss_client = hca.dss.DSSClient(config=dss_config)
 
