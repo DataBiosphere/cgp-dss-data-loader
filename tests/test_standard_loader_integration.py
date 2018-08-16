@@ -135,10 +135,10 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
             message("Verify that all of the results (except metadata.json) are file references "
                     "and set to not be indexed")
             found_matching_file = False
-            for r in search_results['results']:
-                response = requests.get(r['bundle_url'])
-                returned_json = response.json()
-                for f in returned_json['bundle']['files']:
+            for result in search_results['results']:
+                bundle_uuid, _, bundle_version = result['bundle_fqid'].partition(".")
+                bundle_manifest = self.dss_client.get_bundle(replica="aws", uuid=bundle_uuid, version=bundle_version)
+                for f in bundle_manifest['bundle']['files']:
                     if f['name'] != 'metadata.json':
                         assert f['indexed'] is False
                         assert 'dss-type=fileref' in f['content-type']
