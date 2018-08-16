@@ -76,8 +76,14 @@ class DssUploader:
         self.s3_client = boto3.client("s3")
         self.s3_blobstore = s3.S3BlobStore(self.s3_client)
         self.gs_client = Client()
+
+        # Work around problems with DSSClient initialization when there is
+        # existing HCA configuration. The following issue has been submitted:
+        # Problems accessing an alternate DSS from user scripts or unit tests #170
+        # https://github.com/HumanCellAtlas/dcp-cli/issues/170
         monkey_patch_hca_config()
-        dss_config = HCAConfig(name='loader')
+        HCAConfig._user_config_home = '/tmp/'
+        dss_config = HCAConfig(name='loader', save_on_exit=False, autosave=False)
         dss_config['DSSClient'].swagger_url = f'{self.dss_endpoint}/swagger.json'
         self.dss_client = DSSClient(config=dss_config)
 
