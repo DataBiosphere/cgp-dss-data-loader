@@ -17,6 +17,8 @@ TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 
 class AbstractLoaderTest(unittest.TestCase):
 
+    dss_client: DSSClient
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

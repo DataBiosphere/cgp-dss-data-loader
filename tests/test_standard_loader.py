@@ -1,14 +1,11 @@
-import datetime
 import io
 import logging
-import os
 import typing
-import unittest
 import uuid
 from pathlib import Path
 
 import boto3
-import hca
+import iso8601
 
 from loader import base_loader
 from loader.base_loader import FileURLError
@@ -27,6 +24,8 @@ TEST_DATA_PATH = Path(__file__).parents[1] / 'tests' / 'test_data'
 class TestLoader(AbstractLoaderTest):
     """unit tests for standard loader"""
 
+    s3 = boto3.resource('s3')
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -35,7 +34,6 @@ class TestLoader(AbstractLoaderTest):
         cls.metadata_uploader = base_loader.MetadataFileUploader(cls.dss_uploader)
 
         # create test bucket and upload test files
-        cls.s3 = boto3.resource('s3')
         cls.bucket_name = f'loader-test-bucket-{uuid.uuid4()}'
         cls.s3.create_bucket(Bucket=cls.bucket_name, CreateBucketConfiguration={
             'LocationConstraint': 'us-west-2'})
@@ -273,14 +271,41 @@ class TestLoader(AbstractLoaderTest):
         """Same as above but with even more bundles"""
         self._test_loading_bundles_dict([self._make_minimal_bundle(parsed=False) for _ in range(20)], concurrently=True)
 
+    def _get_cloud_object_size(self, cloud_urls: typing.List[str]) -> int:
+        s3_uri = list(filter(lambda url: url.startswith("s3://"), cloud_urls))[0]
+        bucket, key = s3_uri[5:].split("/", 1)
+        obj = self.s3.Object(bucket_name=bucket, key=key) # noqa
+        return obj.content_length
+
+    def _verify_file_reference(self, data_object: ParsedDataFile, file_json: dict) -> None:
+        file_ref_json = self.dss_client.get_file(uuid=file_json['uuid'], version=file_json['version'], replica='aws')
+        self.assertTrue(len(data_object.cloud_urls) >= 1)
+        for url in data_object.cloud_urls:
+            self.assertIn(url, file_ref_json['url'])
+        self.assertEqual(file_ref_json['size'], self._get_cloud_object_size(data_object.cloud_urls))
+        if data_object.file_guid:
+            self.assertIn(data_object.file_guid, file_ref_json['aliases'])
+
     def _test_bundles_in_dss(self, bundles: typing.List[ParsedBundle]):
         """Searches the DSS for the bundles and checks that all the files are there"""
+
+        def versions_equal(version1: str, version2: str) -> bool:
+            """ Check if two ISO 8601 compliant timestamps are equal regardless of specific string format. """
+            return iso8601.parse_date(version1) == iso8601.parse_date(version2)
+
         for bundle in bundles:
             bundle_json = self.dss_client.get_bundle(uuid=bundle.bundle_uuid, replica='aws')['bundle']  # type: ignore
             self.assertEqual(bundle_json['uuid'], bundle.bundle_uuid)
             loaded_file_uuids = {file_json['uuid'] for file_json in bundle_json['files']}
             for data_object in bundle.data_files:
                 self.assertTrue(data_object.file_uuid in loaded_file_uuids)
+            for data_object in bundle.data_files:
+                file_json = list(filter(lambda file_json:
+                                        (file_json['uuid'] == data_object.file_uuid and
+                                         versions_equal(file_json['version'], data_object.file_version)),
+                                        bundle_json['files']))[0]
+                assert "dss-type=fileref" in file_json['content-type']
+                self._verify_file_reference(data_object, file_json)
 
     @ignore_resource_warnings
     def test_minimal_bundle_in_dss(self):

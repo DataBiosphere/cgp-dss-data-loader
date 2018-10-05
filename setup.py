@@ -33,6 +33,7 @@ setup(
                       'dcplib >= 1.3.2, < 2',
                       'google-cloud-storage >= 1.9.0, < 2',
                       'hca == 4.1.4',
+                      'iso8601 == 0.1.12',
                       'requests >= 2.18.4, < 3'],
     license='Apache License 2.0',
     include_package_data=True,
