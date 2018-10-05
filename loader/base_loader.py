@@ -91,7 +91,6 @@ class DssUploader:
                                        filename: str,
                                        file_uuid: str,
                                        file_cloud_urls: set,
-                                       bundle_uuid: str,
                                        guid: str,
                                        file_version: str=None) -> tuple:
         """
@@ -112,7 +111,6 @@ class DssUploader:
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
         :param file_cloud_urls: A set of 'gs://' and 's3://' bucket links.
                                 e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
-        :param bundle_uuid: n RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param guid: An optional additional/alternate data identifier/alias to associate with the file
         e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
         :param file_version: a RFC3339 compliant datetime string
@@ -209,20 +207,18 @@ class DssUploader:
             return consolidated_metadata
 
         if self.dry_run:
-            logger.info(f"DRY RUN: upload_cloud_file_by_reference: {filename} {str(file_cloud_urls)} {bundle_uuid}")
+            logger.info(f"DRY RUN: upload_cloud_file_by_reference: {filename} {str(file_cloud_urls)} {guid}")
 
         file_reference = _create_file_reference(file_cloud_urls, guid)
         return self.upload_dict_as_file(file_reference,
                                         filename,
                                         file_uuid,
-                                        bundle_uuid,
                                         file_version=file_version,
                                         content_type="application/json; dss-type=fileref")
 
     def upload_dict_as_file(self, value: dict,
                             filename: str,
                             file_uuid: str,
-                            bundle_uuid: str,
                             file_version: str=None,  # RFC3339
                             content_type=None):
         """
@@ -231,7 +227,6 @@ class DssUploader:
         :param value: A dictionary representing the JSON content of the file to be created.
         :param filename: The basename of the file in the bucket.
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
-        :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param content_type: Content description e.g. "application/json; dss-type=fileref".
         :param file_version: a RFC3339 compliant datetime string
         :return: file_uuid: str, file_version: str, filename: str, already_present: bool
@@ -242,7 +237,6 @@ class DssUploader:
             fh.write(json.dumps(value, indent=4))
         result = self.upload_local_file(file_path,
                                         file_uuid,
-                                        bundle_uuid,
                                         file_version=file_version,
                                         content_type=content_type)
         os.remove(file_path)
@@ -251,7 +245,6 @@ class DssUploader:
 
     def upload_local_file(self, path: str,
                           file_uuid: str,
-                          bundle_uuid: str,
                           file_version: str=None,
                           content_type=None):
         """
@@ -259,7 +252,6 @@ class DssUploader:
 
         :param path: Path to a local file.
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
-        :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param content_type: Content type identifier, for example: "application/json; dss-type=fileref".
         :param file_version: a RFC3339 compliant datetime string
         :return: file_uuid: str, file_version: str, filename: str, already_present: bool
@@ -268,7 +260,6 @@ class DssUploader:
         return self._upload_tagged_cloud_file_to_dss_by_copy(self.staging_bucket,
                                                              key,
                                                              file_uuid,
-                                                             bundle_uuid,
                                                              file_version=file_version)
 
     def load_bundle(self, file_info_list: list, bundle_uuid: str):
@@ -357,7 +348,6 @@ class DssUploader:
     def _upload_tagged_cloud_file_to_dss_by_copy(self, source_bucket: str,
                                                  source_key: str,
                                                  file_uuid: str,
-                                                 bundle_uuid: str,
                                                  file_version: str=None,
                                                  timeout_seconds=1200):
         """
@@ -367,7 +357,6 @@ class DssUploader:
         :param source_bucket: Name of an S3 bucket.  e.g. 'commons-dss-upload'
         :param source_key: S3 file to upload.  e.g. 'output.txt' or 'data/output.txt'
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file.
-        :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param file_version: a RFC3339 compliant datetime string
         :param timeout_seconds:  Amount of time to continue attempting an async copy.
         :return: file_uuid: str, file_version: str, filename: str, file_present: bool
@@ -377,10 +366,10 @@ class DssUploader:
 
         if self.dry_run:
             logger.info(
-                f"DRY RUN: _upload_tagged_cloud_file_to_dss: {source_bucket} {source_key} {file_uuid} {bundle_uuid}")
+                f"DRY RUN: _upload_tagged_cloud_file_to_dss: {source_bucket} {source_key} {file_uuid} {file_version}")
             return file_uuid, file_version, filename
 
-        request_parameters = dict(uuid=file_uuid, version=file_version, bundle_uuid=bundle_uuid, creator_uid=CREATOR_ID,
+        request_parameters = dict(uuid=file_uuid, version=file_version, creator_uid=CREATOR_ID,
                                   source_url=source_url)
         if self.dry_run:
             print("DRY RUN: put file: " + str(request_parameters))
@@ -434,17 +423,17 @@ class MetadataFileUploader:
     def __init__(self, dss_uploader: DssUploader) -> None:
         self.dss_uploader = dss_uploader
 
-    def load_cloud_file(self, bucket: str, key: str, filename: str, schema_url: str, bundle_uuid: str) -> tuple:
+    def load_cloud_file(self, bucket: str, key: str, filename: str, schema_url: str) -> tuple:
         metadata_string = self.dss_uploader.s3_blobstore.get(bucket, key).decode("utf-8")
         metadata = json.loads(metadata_string)
-        return self.load_dict(metadata, filename, schema_url, bundle_uuid)
+        return self.load_dict(metadata, filename, schema_url)
 
-    def load_local_file(self, local_filename: str, filename: str, schema_url: str, bundle_uuid: str) -> tuple:
+    def load_local_file(self, local_filename: str, filename: str, schema_url: str) -> tuple:
         with open(local_filename, "r") as fh:
             metadata = json.load(fh)
-        return self.load_dict(metadata, filename, schema_url, bundle_uuid)
+        return self.load_dict(metadata, filename, schema_url)
 
-    def load_dict(self, metadata: dict, filename: str, schema_url: str, bundle_uuid: str, file_version=None) -> tuple:
+    def load_dict(self, metadata: dict, filename: str, schema_url: str, file_version=None) -> tuple:
         metadata['describedBy'] = schema_url
         # metadata files don't have file_uuids which is why we have to make it up on the spot
-        return self.dss_uploader.upload_dict_as_file(metadata, filename, str(uuid.uuid4()), bundle_uuid, file_version=file_version)
+        return self.dss_uploader.upload_dict_as_file(metadata, filename, str(uuid.uuid4()), file_version=file_version)

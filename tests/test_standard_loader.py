@@ -194,13 +194,13 @@ class TestLoader(AbstractLoaderTest):
             file.Acl().put(ACL='public-read')
 
             data_objects[file_guid] = ParsedDataFile(filename, file_uuid, cloud_urls,
-                                                     bundle_uuid, file_guid, file_version)
+                                                     file_guid, file_version)
 
         if parsed:
             return ParsedBundle(bundle_uuid, metadata_dict, list(data_objects.values()))
         else:
             dict_objects = {}
-            for filename, file_uuid, cloud_urls, bundle_uuid, file_guid, file_version in data_objects.values():
+            for filename, file_uuid, cloud_urls, file_guid, file_version in data_objects.values():
                 dict_objects[file_guid] = {
                     'name': filename,
                     'created': file_version,
@@ -305,13 +305,12 @@ class TestLoader(AbstractLoaderTest):
         """
         _, _, data_files = self._make_minimal_bundle()
         data_file = data_files[0]
-        filename, file_uuid, cloud_urls, bundle_uuid, file_guid, file_version, = data_file
+        filename, file_uuid, cloud_urls, file_guid, file_version, = data_file
 
         _, _, _, already_present = \
             self.dss_uploader.upload_cloud_file_by_reference(filename,
                                                              file_uuid,
                                                              cloud_urls,
-                                                             bundle_uuid,
                                                              file_guid,
                                                              file_version=file_version)
         # make sure the file hasn't already been uploaded
@@ -320,7 +319,6 @@ class TestLoader(AbstractLoaderTest):
             self.dss_uploader.upload_cloud_file_by_reference(filename,
                                                              file_uuid,
                                                              cloud_urls,
-                                                             bundle_uuid,
                                                              file_guid,
                                                              file_version=file_version)
         # make sure the file HAS already been uploaded
