@@ -2,13 +2,14 @@ import io
 import logging
 import typing
 import uuid
+import warnings
 from pathlib import Path
 
 import boto3
 import iso8601
 
 from loader import base_loader
-from loader.base_loader import FileURLError
+from loader.base_loader import FileURLError, CloudUrlNotFound
 from loader.standard_loader import StandardFormatBundleUploader, ParsedBundle, ParseError, ParsedDataFile
 from scripts.cgp_data_loader import GOOGLE_PROJECT_ID
 from tests import ignore_resource_warnings
@@ -121,7 +122,8 @@ class TestLoader(AbstractLoaderTest):
         minimal_file_info = {'name': 'buried_treasure_map',
                              'created': tz_utc_now(),
                              'urls': [{'url': 's3://desert/island/under/palm'},
-                                      {'url': 'gs://captains/quarters/bottom/drawer'}]}
+                                      {'url': 'gs://captains/quarters/bottom/drawer'}],
+                             'size': 0}
         bundle = {}
         self.assertRaises(ParseError, self.loader._parse_bundle, bundle)
         data_bundle = {}
@@ -192,18 +194,19 @@ class TestLoader(AbstractLoaderTest):
             file.Acl().put(ACL='public-read')
 
             data_objects[file_guid] = ParsedDataFile(filename, file_uuid, cloud_urls,
-                                                     file_guid, file_version)
+                                                     file.content_length, file_guid, file_version)
 
         if parsed:
             return ParsedBundle(bundle_uuid, metadata_dict, list(data_objects.values()))
         else:
             dict_objects = {}
-            for filename, file_uuid, cloud_urls, file_guid, file_version in data_objects.values():
+            for filename, file_uuid, cloud_urls, file_size, file_guid, file_version in data_objects.values():
                 dict_objects[file_guid] = {
                     'name': filename,
                     'created': file_version,
                     'id': file_guid,
-                    'urls': [{'url': url} for url in cloud_urls]
+                    'urls': [{'url': url} for url in cloud_urls],
+                    'size': file_size
                 }
             minimal = {
                 'data_bundle': {
@@ -330,22 +333,14 @@ class TestLoader(AbstractLoaderTest):
         """
         _, _, data_files = self._make_minimal_bundle()
         data_file = data_files[0]
-        filename, file_uuid, cloud_urls, file_guid, file_version, = data_file
+        filename, file_uuid, cloud_urls, file_size, file_guid, file_version = data_file
 
         _, _, _, already_present = \
-            self.dss_uploader.upload_cloud_file_by_reference(filename,
-                                                             file_uuid,
-                                                             cloud_urls,
-                                                             file_guid,
-                                                             file_version=file_version)
+            self.dss_uploader.upload_cloud_file_by_reference(filename, file_uuid, cloud_urls, file_size, file_guid, file_version)
         # make sure the file hasn't already been uploaded
         self.assertFalse(already_present)
         _, _, _, already_present = \
-            self.dss_uploader.upload_cloud_file_by_reference(filename,
-                                                             file_uuid,
-                                                             cloud_urls,
-                                                             file_guid,
-                                                             file_version=file_version)
+            self.dss_uploader.upload_cloud_file_by_reference(filename, file_uuid, cloud_urls, file_size, file_guid, file_version)
         # make sure the file HAS already been uploaded
         self.assertTrue(already_present)
 
@@ -355,7 +350,15 @@ class TestLoader(AbstractLoaderTest):
         bundle = self._make_minimal_bundle(parsed=True)
         bundle.data_files[0].cloud_urls[0] = 'https://example.com'
         self.assertRaises(FileURLError, self.loader._load_bundle, *bundle, 0)
-        bundle.data_files[0].cloud_urls[0] = 's3://definatelynotavalidbucketorfile'
-        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle, 1)
-        bundle.data_files[0].cloud_urls[0] = 'gs://definatelynotavalidbucketorfile'
-        self.assertRaises(FileURLError, self.loader._load_bundle, *bundle, 2)
+
+        bundle = self._make_minimal_bundle(parsed=True)
+        bundle.data_files[0].cloud_urls[0] = 's3://definatelynotavalidbucketor/file'
+        with self.assertWarnsRegex(CloudUrlNotFound, 'Could not find "s3://definatelynotavalidbucketor/file"'):
+            warnings.simplefilter('always', 'CloudUrlAccessWarning', append=True)
+            self.loader._load_bundle(*bundle, 1)
+
+        bundle = self._make_minimal_bundle(parsed=True)
+        bundle.data_files[0].cloud_urls[0] = 'gs://definatelynotavalidbucketor/file'
+        with self.assertWarnsRegex(CloudUrlNotFound, 'Could not find "gs://definatelynotavalidbucketor/file"'):
+            warnings.simplefilter('always', 'CloudUrlAccessWarning', append=True)
+            self.loader._load_bundle(*bundle, 2)

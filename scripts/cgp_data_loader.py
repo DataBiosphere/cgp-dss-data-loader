@@ -56,6 +56,13 @@ def main(argv=sys.argv[1:]):
     logging.getLogger(__name__)
     suppress_verbose_logging()
 
+    if not sys.warnoptions:
+        import warnings
+        # Log each unique cloud URL access warning once by default.
+        # This can be overridden using the "PYTHONWARNINGS" environment variable.
+        # See: https://docs.python.org/3/library/warnings.html
+        warnings.simplefilter('default', 'CloudUrlAccessWarning', append=True)
+
     bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
     logging.info(f'Uploading {"serially" if options.serial else "concurrently"}')
     return bundle_uploader.load_all_bundles(load_json_from_file(options.input_json), not options.serial)

@@ -22,6 +22,7 @@ class ParsedDataFile(typing.NamedTuple):
     filename: str
     file_uuid: str
     cloud_urls: typing.List[str]  # list of urls
+    size: int
     file_guid: str
     file_version: str  # rfc3339
 
@@ -95,6 +96,14 @@ class StandardFormatBundleUploader:
                 raise ParseError(f"Expected 'url' as key for urls in file_info: \n{file_info}")
         return [url_dict['url'] for url_dict in urls]
 
+    @staticmethod
+    def _get_file_size(file_info: dict):
+        if 'size' not in file_info:
+            raise ParseError(f'Size field not present in file_info: \n{file_info}')
+        if not int(file_info['size']) >= 0:
+            raise ParseError(f'Invalid value for size in file_info: \n{file_info}')
+        return file_info['size']
+
     @classmethod
     def _parse_bundle(cls, bundle: dict) -> ParsedBundle:
         try:
@@ -116,7 +125,8 @@ class StandardFormatBundleUploader:
             file_uuid = cls._get_file_uuid(file_guid)
             file_version = cls._get_file_version(file_info)
             cloud_urls = cls._get_cloud_urls(file_info)
-            parsed_file = ParsedDataFile(filename, file_uuid, cloud_urls, file_guid, file_version)
+            file_size = cls._get_file_size(file_info)
+            parsed_file = ParsedDataFile(filename, file_uuid, cloud_urls, file_size, file_guid, file_version)
             parsed_files.append(parsed_file)
 
         return ParsedBundle(bundle_uuid, metadata_dict, parsed_files)
@@ -139,13 +149,14 @@ class StandardFormatBundleUploader:
                                    name=metadata_filename, indexed=True))
 
         for data_file in data_files:
-            filename, file_uuid, cloud_urls, file_guid, file_version, = data_file
+            filename, file_uuid, cloud_urls, file_size, file_guid, file_version = data_file
             logger.debug(f'Bundle {bundle_num}: Attempting to upload data file: {filename} '
                          f'with uuid:version {file_uuid}:{file_version}...')
             file_uuid, file_version, filename, already_present = \
                 self.dss_uploader.upload_cloud_file_by_reference(filename,
                                                                  file_uuid,
                                                                  cloud_urls,
+                                                                 file_size,
                                                                  file_guid,
                                                                  file_version=file_version)
             if already_present:

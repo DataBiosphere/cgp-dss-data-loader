@@ -22,8 +22,9 @@ import time
 import uuid
 from io import open
 from tempfile import mkdtemp
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from urllib.parse import urlparse
+from warnings import warn
 
 import boto3
 import botocore
@@ -43,9 +44,25 @@ logger = logging.getLogger(__name__)
 
 CREATOR_ID = 20
 
+class CloudUrlAccessWarning(Warning):
+    """Warning when a cloud URL could not be accessed for any reason"""
+
+class CloudUrlAccessForbidden(CloudUrlAccessWarning):
+    """Warning when a cloud URL could not be accessed due to authorization issues"""
+
+class CloudUrlNotFound(CloudUrlAccessWarning):
+    """Warning when a cloud URL was not found"""
 
 class FileURLError(Exception):
     """Thrown when a file cannot be accessed by the given URl"""
+
+
+class InconsistentFileSizeValues(Exception):
+    """Thrown when the input file size does not match the actual file size of a file being loaded by reference"""
+
+
+class MissingInputFileSize(Exception):
+    """Thrown when the input file size is not available for a data file being loaded by reference"""
 
 
 class UnexpectedResponseError(Exception):
@@ -91,6 +108,7 @@ class DssUploader:
                                        filename: str,
                                        file_uuid: str,
                                        file_cloud_urls: set,
+                                       size: int,
                                        guid: str,
                                        file_version: str=None) -> tuple:
         """
@@ -111,13 +129,18 @@ class DssUploader:
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
         :param file_cloud_urls: A set of 'gs://' and 's3://' bucket links.
                                 e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
+        :param size: size of the file in bytes, as provided by the input data to be loaded.
+         An attempt will be made to access the `file_cloud_objects` to obtain the
+         basic file metadata, and if successful, the size is verified to be consistent.
         :param guid: An optional additional/alternate data identifier/alias to associate with the file
         e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
         :param file_version: a RFC3339 compliant datetime string
         :return: file_uuid: str, file_version: str, filename: str, already_present: bool
+        :raises MissingFileSize: If no input file size is available for file to be loaded by reference
+        :raises InconsistentFileSizeValues: If file sizes are inconsistent for file to be loaded by reference
         """
 
-        def _create_file_reference(file_cloud_urls: set, guid: str) -> dict:
+        def _create_file_reference(file_cloud_urls: set, size: int, guid: str) -> dict:
             """
             Format a file's metadata into a dictionary for uploading as a json to support the approach
             described here:
@@ -127,22 +150,26 @@ class DssUploader:
                                     e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
             :param guid: An optional additional/alternate data identifier/alias to associate with the file
             e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
-            :param file_version: RFC3339 formatted timestamp.
+            :param size: file size in bytes from input data
             :return: A dictionary of metadata values.
             """
-            s3_metadata = None
-            gs_metadata = None
+
+            input_metadata = dict(size=size)
+            s3_metadata: Dict[str, Any] = dict()
+            gs_metadata: Dict[str, Any] = dict()
             for cloud_url in file_cloud_urls:
                 url = urlparse(cloud_url)
                 bucket = url.netloc
                 key = url.path[1:]
+                if not (bucket and key):
+                    raise FileURLError(f'Invalid URL {cloud_url}')
                 if url.scheme == "s3":
                     s3_metadata = _get_s3_file_metadata(bucket, key)
                 elif url.scheme == "gs":
                     gs_metadata = _get_gs_file_metadata(bucket, key)
                 else:
                     raise FileURLError("Unsupported cloud URL scheme: {cloud_url}")
-            return _consolidate_metadata(file_cloud_urls, s3_metadata, gs_metadata, guid)
+            return _consolidate_metadata(file_cloud_urls, input_metadata, s3_metadata, gs_metadata, guid)
 
         def _get_s3_file_metadata(bucket: str, key: str) -> dict:
             """
@@ -155,11 +182,24 @@ class DssUploader:
             metadata = dict()
             try:
                 response = self.s3_client.head_object(Bucket=bucket, Key=key, RequestPayer="requester")
-                metadata['content-type'] = response['ContentType']
-                metadata['s3_etag'] = response['ETag']
-                metadata['size'] = response['ContentLength']
-            except Exception as e:
-                raise FileURLError(f"Error accessing s3://{bucket}/{key}") from e
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error']['Code'] == str(requests.codes.not_found):
+                    warn(f'Could not find \"s3://{bucket}/{key}\" Error: {e}'
+                         ' The S3 file metadata for this file reference will be missing.',
+                         CloudUrlNotFound)
+                else:
+                    warn(f"Failed to access \"s3://{bucket}/{key}\" Error: {e}"
+                         " The S3 file metadata for this file reference will be missing.",
+                         CloudUrlAccessWarning)
+            else:
+                try:
+                    metadata['size'] = response['ContentLength']
+                    metadata['content-type'] = response['ContentType']
+                    metadata['s3_etag'] = response['ETag']
+                except KeyError as e:
+                    # These standard metadata should always be present.
+                    logging.error(f'Failed to access "s3://{bucket}/{key}" file metadata field. Error: {e}'
+                                  ' The S3 file metadata for this file will be incomplete.')
             return metadata
 
         def _get_gs_file_metadata(bucket: str, key: str) -> dict:
@@ -170,25 +210,30 @@ class DssUploader:
             :param key: GS file to upload.  e.g. 'output.txt' or 'data/output.txt'
             :return: A dictionary of metadata values.
             """
-            metadata = dict()
-            try:
-                gs_bucket = self.gs_client.bucket(bucket, self.google_project_id)
-                blob_obj = gs_bucket.get_blob(key)
+            gs_bucket = self.gs_client.bucket(bucket, self.google_project_id)
+            blob_obj = gs_bucket.get_blob(key)
+            if blob_obj is not None:
+                metadata = dict()
+                metadata['size'] = blob_obj.size
                 metadata['content-type'] = blob_obj.content_type
                 metadata['crc32c'] = binascii.hexlify(base64.b64decode(blob_obj.crc32c)).decode("utf-8").lower()
-                metadata['size'] = blob_obj.size
-            except Exception as e:
-                raise FileURLError(f"Error accessing gs://{bucket}/{key}") from e
-            return metadata
+                return metadata
+            else:
+                warn(f'Could not find "gs://{bucket}/{key}"'
+                     ' The GS file metadata for this file reference will be missing.',
+                     CloudUrlNotFound)
+                return dict()
 
         def _consolidate_metadata(file_cloud_urls: set,
-                                  s3_metadata: Optional[Dict[str, Any]],
-                                  gs_metadata: Optional[Dict[str, Any]],
+                                  input_metadata: Dict[str, Any],
+                                  s3_metadata: Dict[str, Any],
+                                  gs_metadata: Dict[str, Any],
                                   guid: str) -> dict:
             """
             Consolidates cloud file metadata to create the JSON used to load by reference
             into the DSS.
 
+            :param input_metadata:
             :param file_cloud_urls: A set of 'gs://' and 's3://' bucket URLs.
                                     e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
             :param s3_metadata: Dictionary of meta data produced by _get_s3_file_metadata().
@@ -197,11 +242,30 @@ class DssUploader:
             e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
             :return: A dictionary of cloud file metadata values
             """
-            consolidated_metadata = dict()
-            if s3_metadata:
-                consolidated_metadata.update(s3_metadata)
-            if gs_metadata:
-                consolidated_metadata.update(gs_metadata)
+
+            def _check_file_size_consistency(input_metadata, s3_metadata, gs_metadata):
+                input_size = input_metadata.get('size', None)
+                if input_size is not None:
+                    input_size = int(input_size)
+                else:
+                    raise MissingInputFileSize('No input file size is available for file being loaded by reference.')
+                s3_size = s3_metadata.get('size', None)
+                gs_size = gs_metadata.get('size', None)
+                if s3_size and input_size != s3_size:
+                    raise InconsistentFileSizeValues(
+                        f'Input file size does not match actual S3 file size: '
+                        f'input size: {input_size}, S3 actual size: {s3_size}')
+                if gs_size and input_size != gs_size:
+                    raise InconsistentFileSizeValues(
+                        f'Input file size does not match actual GS actual file size: '
+                        f'input size: {input_size}, GS actual size: {gs_size}')
+                return input_size
+
+            consolidated_metadata: Dict[str, Any] = dict()
+            consolidated_metadata.update(input_metadata)
+            consolidated_metadata.update(s3_metadata)
+            consolidated_metadata.update(gs_metadata)
+            consolidated_metadata['size'] = _check_file_size_consistency(input_metadata, s3_metadata, gs_metadata)
             consolidated_metadata['url'] = list(file_cloud_urls)
             consolidated_metadata['aliases'] = [str(guid)]
             return consolidated_metadata
@@ -209,7 +273,7 @@ class DssUploader:
         if self.dry_run:
             logger.info(f"DRY RUN: upload_cloud_file_by_reference: {filename} {str(file_cloud_urls)} {guid}")
 
-        file_reference = _create_file_reference(file_cloud_urls, guid)
+        file_reference = _create_file_reference(file_cloud_urls, size, guid)
         return self.upload_dict_as_file(file_reference,
                                         filename,
                                         file_uuid,
