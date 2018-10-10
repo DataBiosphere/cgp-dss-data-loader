@@ -39,7 +39,7 @@ class AbstractLoaderTest(unittest.TestCase):
     def _search_for_bundle(self, bundle_uuid):
         # Search for the bundle uuid in the DSS and make sure it now exists and uploading was successful
         search_results = self.dss_client.post_search(es_query={'query': {'term': {'uuid': bundle_uuid}}}, replica='aws')
-        assert search_results['total_hits'] > 0
+        assert search_results['total_hits'] > 0, 'Not found'
         return search_results
 
     @staticmethod
@@ -58,7 +58,7 @@ class AbstractLoaderTest(unittest.TestCase):
                 json.dump(json_contents, fh)
             yield jsonFile.name
 
-    def _load_file(self, tmp_json):
+    def _load_bundle(self, tmp_json):
         """ run the load script """
         args = ['--no-dry-run',
                 '--dss-endpoint',

@@ -271,7 +271,8 @@ class DssUploader:
             return consolidated_metadata
 
         if self.dry_run:
-            logger.info(f"DRY RUN: upload_cloud_file_by_reference: {filename} {str(file_cloud_urls)} {guid}")
+            logger.info(f'DRY RUN: upload_cloud_file_by_reference: '
+                        f'{filename} {file_uuid} {str(file_cloud_urls)} {size} {guid}')
 
         file_reference = _create_file_reference(file_cloud_urls, size, guid)
         return self.upload_dict_as_file(file_reference,
@@ -339,12 +340,13 @@ class DssUploader:
                       files=file_info_list,
                       uuid=bundle_uuid,
                       version=tz_utc_now())
-        if not self.dry_run:
-            response = self.dss_client.put_bundle(**kwargs)
-            version = response['version']
-        else:
+
+        if self.dry_run:
             logger.info("DRY RUN: DSS put bundle: " + str(kwargs))
-            version = None
+            return f"{bundle_uuid}.{kwargs['version']}"
+
+        response = self.dss_client.put_bundle(**kwargs)
+        version = response['version']
         bundle_fqid = f"{bundle_uuid}.{version}"
         logger.info(f"Loaded bundle: {bundle_fqid}")
         return bundle_fqid
@@ -428,16 +430,11 @@ class DssUploader:
         source_url = f"s3://{source_bucket}/{source_key}"
         filename = self.get_filename_from_key(source_key)
 
-        if self.dry_run:
-            logger.info(
-                f"DRY RUN: _upload_tagged_cloud_file_to_dss: {source_bucket} {source_key} {file_uuid} {file_version}")
-            return file_uuid, file_version, filename
-
         request_parameters = dict(uuid=file_uuid, version=file_version, creator_uid=CREATOR_ID,
                                   source_url=source_url)
         if self.dry_run:
-            print("DRY RUN: put file: " + str(request_parameters))
-            return file_uuid, file_version, filename
+            logger.info("DRY RUN: put file: " + str(request_parameters))
+            return file_uuid, file_version, filename, False
 
         copy_start_time = time.time()
         response = self.dss_client.put_file._request(request_parameters)
