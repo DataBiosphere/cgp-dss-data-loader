@@ -39,6 +39,20 @@ def main(argv=sys.argv[1:]):
                         help='Upload bundles serially. This can be useful for debugging')
     parser.add_argument('input_json', metavar='INPUT_JSON',
                         help="Path to the standard JSON format input file")
+    parser.add_argument('--aws_metadata_cred', required=False, default=None,
+                        help="The loader by default needs no additional credentials to "
+                             "access public references, but when attempting to access "
+                             "private cloud files in order to determine size and hash "
+                             "metadata it may be blocked.  This field supplies a "
+                             "path to a file containing additional credentials "
+                             "needed to access the referenced files directly.")
+    parser.add_argument('--gce_metadata_cred', required=False, default=None,
+                        help="The loader by default needs no additional credentials to "
+                             "access public references, but when attempting to access "
+                             "private cloud files in order to determine size and hash "
+                             "metadata it may be blocked.  This field supplies a "
+                             "path to a file containing additional credentials "
+                             "needed to access the referenced files directly.")
 
     options = parser.parse_args(argv)
 
@@ -47,14 +61,21 @@ def main(argv=sys.argv[1:]):
     # os.environ.pop('GOOGLE_APPLICATION_CREDENTIALS', None)
     # os.environ.pop('GOOGLE_APPLICATION_SECRETS', None)
 
-    dss_uploader = base_loader.DssUploader(options.dss_endpoint, options.staging_bucket,
-                                           GOOGLE_PROJECT_ID, options.dry_run)
-    metadata_file_uploader = base_loader.MetadataFileUploader(dss_uploader)
-
     logging.basicConfig(level=logging.getLevelName(options.log_level),
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     logging.getLogger(__name__)
     suppress_verbose_logging()
+
+    if bool(options.aws_metadata_cred) != bool(options.gce_metadata_cred):
+        logging.warning(f'Additional credentials are only specified for one cloud '
+                        '(if both are not supplied, things may not go as planned): '
+                        '\n{options.aws_metadata_cred}'
+                        '\n{options.gce_metadata_cred}\n')
+
+    dss_uploader = base_loader.DssUploader(options.dss_endpoint, options.staging_bucket,
+                                           GOOGLE_PROJECT_ID, options.dry_run,
+                                           options.aws_metadata_cred, options.gce_metadata_cred)
+    metadata_file_uploader = base_loader.MetadataFileUploader(dss_uploader)
 
     bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
     logging.info(f'Uploading {"serially" if options.serial else "concurrently"}')

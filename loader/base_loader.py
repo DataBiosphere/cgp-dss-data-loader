@@ -53,7 +53,8 @@ class UnexpectedResponseError(Exception):
 
 
 class DssUploader:
-    def __init__(self, dss_endpoint: str, staging_bucket: str, google_project_id: str, dry_run: bool) -> None:
+    def __init__(self, dss_endpoint: str, staging_bucket: str, google_project_id: str, dry_run: bool,
+                 aws_meta_cred: str, gce_meta_cred: str) -> None:
         """
         Functions for uploading files to a given DSS.
 
@@ -63,11 +64,13 @@ class DssUploader:
         required by the DSS are assigned to it, then the file is loaded into the DSS (by copy).
         The bucket must be accessible by the DSS. .e.g. 'commons-dss-upload'
         :param google_project_id: A Google `Project ID` to be used when accessing GCP requester pays buckets.
-        e.g. "platform-dev-178517"
-        One way to find a `Project ID` is provided here:
-        https://console.cloud.google.com/cloud-resource-manager
+                                  e.g. "platform-dev-178517"
+                                  One way to find a `Project ID` is provided here:
+                                  https://console.cloud.google.com/cloud-resource-manager
         :param dry_run: If True, log the actions that would be performed yet don't actually execute them.
-        Otherwise, actually perform the operations.
+                        Otherwise, actually perform the operations.
+        :param aws_meta_cred: Optional credentials used to fetch metadata from a private bucket.
+        :param gce_meta_cred: Optional credentials used to fetch metadata from a private bucket.
         """
         self.dss_endpoint = dss_endpoint
         self.staging_bucket = staging_bucket
@@ -76,6 +79,11 @@ class DssUploader:
         self.s3_client = boto3.client("s3")
         self.s3_blobstore = s3.S3BlobStore(self.s3_client)
         self.gs_client = Client()
+
+        # optional clients for fetching protected metadata that the
+        # main credentials may not have access to
+        self.s3_metadata_client = self.mk_s3_metadata_client(aws_meta_cred)
+        self.gs_metadata_client = self.mk_gs_metadata_client(gce_meta_cred)
 
         # Work around problems with DSSClient initialization when there is
         # existing HCA configuration. The following issue has been submitted:
@@ -86,6 +94,24 @@ class DssUploader:
         dss_config = HCAConfig(name='loader', save_on_exit=False, autosave=False)
         dss_config['DSSClient'].swagger_url = f'{self.dss_endpoint}/swagger.json'
         self.dss_client = DSSClient(config=dss_config)
+
+    def mk_s3_metadata_client(self, aws_meta_cred):
+        """Access AWS credentials from a file and supply a client for them."""
+        if not aws_meta_cred:
+            return None
+
+        with open(aws_meta_cred, 'r') as f:
+            access_key, secret_key = [i.strip() for i in f.read().split(',')]
+        return boto3.client('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+
+    def mk_gs_metadata_client(self, gce_meta_cred):
+        """Access Google credentials from a file and supply a client for them."""
+        if not gce_meta_cred:
+            return None
+
+        with open(gce_meta_cred, 'r') as f:
+            project, credentials = [i.strip() for i in f.read().split(',')]
+        return Client(project=project, credentials=credentials)
 
     def upload_cloud_file_by_reference(self,
                                        filename: str,
@@ -155,8 +181,9 @@ class DssUploader:
             :return: A dictionary of metadata values.
             """
             metadata = dict()
+            client = self.s3_metadata_client if self.s3_metadata_client else self.s3_client
             try:
-                response = self.s3_client.head_object(Bucket=bucket, Key=key, RequestPayer="requester")
+                response = client.head_object(Bucket=bucket, Key=key, RequestPayer="requester")
                 metadata['content-type'] = response['ContentType']
                 metadata['s3_etag'] = response['ETag']
                 metadata['size'] = response['ContentLength']
@@ -173,8 +200,9 @@ class DssUploader:
             :return: A dictionary of metadata values.
             """
             metadata = dict()
+            client = self.gs_metadata_client if self.gs_metadata_client else self.gs_client
             try:
-                gs_bucket = self.gs_client.bucket(bucket, self.google_project_id)
+                gs_bucket = client.bucket(bucket, self.google_project_id)
                 blob_obj = gs_bucket.get_blob(key)
                 metadata['content-type'] = blob_obj.content_type
                 metadata['crc32c'] = binascii.hexlify(base64.b64decode(blob_obj.crc32c)).decode("utf-8").lower()
