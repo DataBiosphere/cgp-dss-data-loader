@@ -209,9 +209,6 @@ class DssUploader:
             client = self.s3_metadata_client if self.s3_metadata_client else self.s3_client
             try:
                 response = client.head_object(Bucket=bucket, Key=key, RequestPayer="requester")
-                metadata['content-type'] = response['ContentType']
-                metadata['s3_etag'] = response['ETag']
-                metadata['size'] = response['ContentLength']
             except botocore.exceptions.ClientError as e:
                 if e.response['Error']['Code'] == str(requests.codes.not_found):
                     warn(f'Could not find \"s3://{bucket}/{key}\" Error: {e}'
