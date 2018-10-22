@@ -54,7 +54,7 @@ class UnexpectedResponseError(Exception):
 
 class DssUploader:
     def __init__(self, dss_endpoint: str, staging_bucket: str, google_project_id: str, dry_run: bool,
-                 aws_meta_cred: str, gce_meta_cred: str) -> None:
+                 aws_meta_cred: str=None, gce_meta_cred: str=None) -> None:
         """
         Functions for uploading files to a given DSS.
 
