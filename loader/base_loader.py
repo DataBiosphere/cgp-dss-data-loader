@@ -22,8 +22,9 @@ import time
 import uuid
 from io import open
 from tempfile import mkdtemp
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from urllib.parse import urlparse
+from warnings import warn
 
 import boto3
 import botocore
@@ -43,9 +44,25 @@ logger = logging.getLogger(__name__)
 
 CREATOR_ID = 20
 
+class CloudUrlAccessWarning(Warning):
+    """Warning when a cloud URL could not be accessed for any reason"""
+
+class CloudUrlAccessForbidden(CloudUrlAccessWarning):
+    """Warning when a cloud URL could not be accessed due to authorization issues"""
+
+class CloudUrlNotFound(CloudUrlAccessWarning):
+    """Warning when a cloud URL was not found"""
 
 class FileURLError(Exception):
     """Thrown when a file cannot be accessed by the given URl"""
+
+
+class InconsistentFileSizeValues(Exception):
+    """Thrown when the input file size does not match the actual file size of a file being loaded by reference"""
+
+
+class MissingInputFileSize(Exception):
+    """Thrown when the input file size is not available for a data file being loaded by reference"""
 
 
 class UnexpectedResponseError(Exception):
@@ -117,7 +134,7 @@ class DssUploader:
                                        filename: str,
                                        file_uuid: str,
                                        file_cloud_urls: set,
-                                       bundle_uuid: str,
+                                       size: int,
                                        guid: str,
                                        file_version: str=None) -> tuple:
         """
@@ -138,14 +155,18 @@ class DssUploader:
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
         :param file_cloud_urls: A set of 'gs://' and 's3://' bucket links.
                                 e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
-        :param bundle_uuid: n RFC4122-compliant UUID to be used to identify the bundle containing the file
+        :param size: size of the file in bytes, as provided by the input data to be loaded.
+         An attempt will be made to access the `file_cloud_objects` to obtain the
+         basic file metadata, and if successful, the size is verified to be consistent.
         :param guid: An optional additional/alternate data identifier/alias to associate with the file
         e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
         :param file_version: a RFC3339 compliant datetime string
         :return: file_uuid: str, file_version: str, filename: str, already_present: bool
+        :raises MissingFileSize: If no input file size is available for file to be loaded by reference
+        :raises InconsistentFileSizeValues: If file sizes are inconsistent for file to be loaded by reference
         """
 
-        def _create_file_reference(file_cloud_urls: set, guid: str) -> dict:
+        def _create_file_reference(file_cloud_urls: set, size: int, guid: str) -> dict:
             """
             Format a file's metadata into a dictionary for uploading as a json to support the approach
             described here:
@@ -155,22 +176,26 @@ class DssUploader:
                                     e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
             :param guid: An optional additional/alternate data identifier/alias to associate with the file
             e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
-            :param file_version: RFC3339 formatted timestamp.
+            :param size: file size in bytes from input data
             :return: A dictionary of metadata values.
             """
-            s3_metadata = None
-            gs_metadata = None
+
+            input_metadata = dict(size=size)
+            s3_metadata: Dict[str, Any] = dict()
+            gs_metadata: Dict[str, Any] = dict()
             for cloud_url in file_cloud_urls:
                 url = urlparse(cloud_url)
                 bucket = url.netloc
                 key = url.path[1:]
+                if not (bucket and key):
+                    raise FileURLError(f'Invalid URL {cloud_url}')
                 if url.scheme == "s3":
                     s3_metadata = _get_s3_file_metadata(bucket, key)
                 elif url.scheme == "gs":
                     gs_metadata = _get_gs_file_metadata(bucket, key)
                 else:
                     raise FileURLError("Unsupported cloud URL scheme: {cloud_url}")
-            return _consolidate_metadata(file_cloud_urls, s3_metadata, gs_metadata, guid)
+            return _consolidate_metadata(file_cloud_urls, input_metadata, s3_metadata, gs_metadata, guid)
 
         def _get_s3_file_metadata(bucket: str, key: str) -> dict:
             """
@@ -187,8 +212,24 @@ class DssUploader:
                 metadata['content-type'] = response['ContentType']
                 metadata['s3_etag'] = response['ETag']
                 metadata['size'] = response['ContentLength']
-            except Exception as e:
-                raise FileURLError(f"Error accessing s3://{bucket}/{key}") from e
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error']['Code'] == str(requests.codes.not_found):
+                    warn(f'Could not find \"s3://{bucket}/{key}\" Error: {e}'
+                         ' The S3 file metadata for this file reference will be missing.',
+                         CloudUrlNotFound)
+                else:
+                    warn(f"Failed to access \"s3://{bucket}/{key}\" Error: {e}"
+                         " The S3 file metadata for this file reference will be missing.",
+                         CloudUrlAccessWarning)
+            else:
+                try:
+                    metadata['size'] = response['ContentLength']
+                    metadata['content-type'] = response['ContentType']
+                    metadata['s3_etag'] = response['ETag']
+                except KeyError as e:
+                    # These standard metadata should always be present.
+                    logging.error(f'Failed to access "s3://{bucket}/{key}" file metadata field. Error: {e}'
+                                  ' The S3 file metadata for this file will be incomplete.')
             return metadata
 
         def _get_gs_file_metadata(bucket: str, key: str) -> dict:
@@ -201,24 +242,30 @@ class DssUploader:
             """
             metadata = dict()
             client = self.gs_metadata_client if self.gs_metadata_client else self.gs_client
-            try:
-                gs_bucket = client.bucket(bucket, self.google_project_id)
-                blob_obj = gs_bucket.get_blob(key)
+            gs_bucket = client.bucket(bucket, self.google_project_id)
+            blob_obj = gs_bucket.get_blob(key)
+            if blob_obj is not None:
+                metadata = dict()
+                metadata['size'] = blob_obj.size
                 metadata['content-type'] = blob_obj.content_type
                 metadata['crc32c'] = binascii.hexlify(base64.b64decode(blob_obj.crc32c)).decode("utf-8").lower()
-                metadata['size'] = blob_obj.size
-            except Exception as e:
-                raise FileURLError(f"Error accessing gs://{bucket}/{key}") from e
-            return metadata
+                return metadata
+            else:
+                warn(f'Could not find "gs://{bucket}/{key}"'
+                     ' The GS file metadata for this file reference will be missing.',
+                     CloudUrlNotFound)
+                return dict()
 
         def _consolidate_metadata(file_cloud_urls: set,
-                                  s3_metadata: Optional[Dict[str, Any]],
-                                  gs_metadata: Optional[Dict[str, Any]],
+                                  input_metadata: Dict[str, Any],
+                                  s3_metadata: Dict[str, Any],
+                                  gs_metadata: Dict[str, Any],
                                   guid: str) -> dict:
             """
             Consolidates cloud file metadata to create the JSON used to load by reference
             into the DSS.
 
+            :param input_metadata:
             :param file_cloud_urls: A set of 'gs://' and 's3://' bucket URLs.
                                     e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
             :param s3_metadata: Dictionary of meta data produced by _get_s3_file_metadata().
@@ -227,30 +274,48 @@ class DssUploader:
             e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
             :return: A dictionary of cloud file metadata values
             """
-            consolidated_metadata = dict()
-            if s3_metadata:
-                consolidated_metadata.update(s3_metadata)
-            if gs_metadata:
-                consolidated_metadata.update(gs_metadata)
+
+            def _check_file_size_consistency(input_metadata, s3_metadata, gs_metadata):
+                input_size = input_metadata.get('size', None)
+                if input_size is not None:
+                    input_size = int(input_size)
+                else:
+                    raise MissingInputFileSize('No input file size is available for file being loaded by reference.')
+                s3_size = s3_metadata.get('size', None)
+                gs_size = gs_metadata.get('size', None)
+                if s3_size and input_size != s3_size:
+                    raise InconsistentFileSizeValues(
+                        f'Input file size does not match actual S3 file size: '
+                        f'input size: {input_size}, S3 actual size: {s3_size}')
+                if gs_size and input_size != gs_size:
+                    raise InconsistentFileSizeValues(
+                        f'Input file size does not match actual GS actual file size: '
+                        f'input size: {input_size}, GS actual size: {gs_size}')
+                return input_size
+
+            consolidated_metadata: Dict[str, Any] = dict()
+            consolidated_metadata.update(input_metadata)
+            consolidated_metadata.update(s3_metadata)
+            consolidated_metadata.update(gs_metadata)
+            consolidated_metadata['size'] = _check_file_size_consistency(input_metadata, s3_metadata, gs_metadata)
             consolidated_metadata['url'] = list(file_cloud_urls)
             consolidated_metadata['aliases'] = [str(guid)]
             return consolidated_metadata
 
         if self.dry_run:
-            logger.info(f"DRY RUN: upload_cloud_file_by_reference: {filename} {str(file_cloud_urls)} {bundle_uuid}")
+            logger.info(f'DRY RUN: upload_cloud_file_by_reference: '
+                        f'{filename} {file_uuid} {str(file_cloud_urls)} {size} {guid}')
 
-        file_reference = _create_file_reference(file_cloud_urls, guid)
+        file_reference = _create_file_reference(file_cloud_urls, size, guid)
         return self.upload_dict_as_file(file_reference,
                                         filename,
                                         file_uuid,
-                                        bundle_uuid,
                                         file_version=file_version,
                                         content_type="application/json; dss-type=fileref")
 
     def upload_dict_as_file(self, value: dict,
                             filename: str,
                             file_uuid: str,
-                            bundle_uuid: str,
                             file_version: str=None,  # RFC3339
                             content_type=None):
         """
@@ -259,7 +324,6 @@ class DssUploader:
         :param value: A dictionary representing the JSON content of the file to be created.
         :param filename: The basename of the file in the bucket.
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
-        :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param content_type: Content description e.g. "application/json; dss-type=fileref".
         :param file_version: a RFC3339 compliant datetime string
         :return: file_uuid: str, file_version: str, filename: str, already_present: bool
@@ -270,7 +334,6 @@ class DssUploader:
             fh.write(json.dumps(value, indent=4))
         result = self.upload_local_file(file_path,
                                         file_uuid,
-                                        bundle_uuid,
                                         file_version=file_version,
                                         content_type=content_type)
         os.remove(file_path)
@@ -279,7 +342,6 @@ class DssUploader:
 
     def upload_local_file(self, path: str,
                           file_uuid: str,
-                          bundle_uuid: str,
                           file_version: str=None,
                           content_type=None):
         """
@@ -287,7 +349,6 @@ class DssUploader:
 
         :param path: Path to a local file.
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file
-        :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param content_type: Content type identifier, for example: "application/json; dss-type=fileref".
         :param file_version: a RFC3339 compliant datetime string
         :return: file_uuid: str, file_version: str, filename: str, already_present: bool
@@ -296,7 +357,6 @@ class DssUploader:
         return self._upload_tagged_cloud_file_to_dss_by_copy(self.staging_bucket,
                                                              key,
                                                              file_uuid,
-                                                             bundle_uuid,
                                                              file_version=file_version)
 
     def load_bundle(self, file_info_list: list, bundle_uuid: str):
@@ -312,12 +372,13 @@ class DssUploader:
                       files=file_info_list,
                       uuid=bundle_uuid,
                       version=tz_utc_now())
-        if not self.dry_run:
-            response = self.dss_client.put_bundle(**kwargs)
-            version = response['version']
-        else:
+
+        if self.dry_run:
             logger.info("DRY RUN: DSS put bundle: " + str(kwargs))
-            version = None
+            return f"{bundle_uuid}.{kwargs['version']}"
+
+        response = self.dss_client.put_bundle(**kwargs)
+        version = response['version']
         bundle_fqid = f"{bundle_uuid}.{version}"
         logger.info(f"Loaded bundle: {bundle_fqid}")
         return bundle_fqid
@@ -385,7 +446,6 @@ class DssUploader:
     def _upload_tagged_cloud_file_to_dss_by_copy(self, source_bucket: str,
                                                  source_key: str,
                                                  file_uuid: str,
-                                                 bundle_uuid: str,
                                                  file_version: str=None,
                                                  timeout_seconds=1200):
         """
@@ -395,7 +455,6 @@ class DssUploader:
         :param source_bucket: Name of an S3 bucket.  e.g. 'commons-dss-upload'
         :param source_key: S3 file to upload.  e.g. 'output.txt' or 'data/output.txt'
         :param file_uuid: An RFC4122-compliant UUID to be used to identify the file.
-        :param bundle_uuid: An RFC4122-compliant UUID to be used to identify the bundle containing the file
         :param file_version: a RFC3339 compliant datetime string
         :param timeout_seconds:  Amount of time to continue attempting an async copy.
         :return: file_uuid: str, file_version: str, filename: str, file_present: bool
@@ -403,16 +462,11 @@ class DssUploader:
         source_url = f"s3://{source_bucket}/{source_key}"
         filename = self.get_filename_from_key(source_key)
 
-        if self.dry_run:
-            logger.info(
-                f"DRY RUN: _upload_tagged_cloud_file_to_dss: {source_bucket} {source_key} {file_uuid} {bundle_uuid}")
-            return file_uuid, file_version, filename
-
-        request_parameters = dict(uuid=file_uuid, version=file_version, bundle_uuid=bundle_uuid, creator_uid=CREATOR_ID,
+        request_parameters = dict(uuid=file_uuid, version=file_version, creator_uid=CREATOR_ID,
                                   source_url=source_url)
         if self.dry_run:
-            print("DRY RUN: put file: " + str(request_parameters))
-            return file_uuid, file_version, filename
+            logger.info("DRY RUN: put file: " + str(request_parameters))
+            return file_uuid, file_version, filename, False
 
         copy_start_time = time.time()
         response = self.dss_client.put_file._request(request_parameters)
@@ -462,17 +516,17 @@ class MetadataFileUploader:
     def __init__(self, dss_uploader: DssUploader) -> None:
         self.dss_uploader = dss_uploader
 
-    def load_cloud_file(self, bucket: str, key: str, filename: str, schema_url: str, bundle_uuid: str) -> tuple:
+    def load_cloud_file(self, bucket: str, key: str, filename: str, schema_url: str) -> tuple:
         metadata_string = self.dss_uploader.s3_blobstore.get(bucket, key).decode("utf-8")
         metadata = json.loads(metadata_string)
-        return self.load_dict(metadata, filename, schema_url, bundle_uuid)
+        return self.load_dict(metadata, filename, schema_url)
 
-    def load_local_file(self, local_filename: str, filename: str, schema_url: str, bundle_uuid: str) -> tuple:
+    def load_local_file(self, local_filename: str, filename: str, schema_url: str) -> tuple:
         with open(local_filename, "r") as fh:
             metadata = json.load(fh)
-        return self.load_dict(metadata, filename, schema_url, bundle_uuid)
+        return self.load_dict(metadata, filename, schema_url)
 
-    def load_dict(self, metadata: dict, filename: str, schema_url: str, bundle_uuid: str, file_version=None) -> tuple:
+    def load_dict(self, metadata: dict, filename: str, schema_url: str, file_version=None) -> tuple:
         metadata['describedBy'] = schema_url
         # metadata files don't have file_uuids which is why we have to make it up on the spot
-        return self.dss_uploader.upload_dict_as_file(metadata, filename, str(uuid.uuid4()), bundle_uuid, file_version=file_version)
+        return self.dss_uploader.upload_dict_as_file(metadata, filename, str(uuid.uuid4()), file_version=file_version)
