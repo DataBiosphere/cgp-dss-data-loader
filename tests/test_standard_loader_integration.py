@@ -41,6 +41,9 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
     def test_basic_input_format_loading_from_cli_concurrent(self):
         self._test_gen3_loading_from_cli(self.test_file)
 
+    def test_basic_input_format_loading_from_cli_dry_run(self):
+        self._test_gen3_loading_from_cli(self.test_file, more_args=['--dry-run'])
+
     @staticmethod
     @contextmanager
     def _tmp_json_file(json_input_file, guid, file_guid, file_version):
@@ -74,11 +77,10 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
                 json.dump(fixed_json, fh)
             yield jsonFile.name
 
-    def _load_file(self, tmp_json, more_args=None):
+    def _load_bundle(self, tmp_json, more_args=None):
         """run the load script and clean up after ourselves"""
         # upload the data bundle to the DSS
-        args = ['--no-dry-run',
-                '--dss-endpoint',
+        args = ['--dss-endpoint',
                 f'{self.dss_endpoint}',
                 '--staging-bucket',
                 f'{self.staging_bucket}',
@@ -86,6 +88,8 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
         if more_args:
             # Prepend because positional arg has to be last
             args = more_args + args
+        if not ('--dry-run' in args or '--no-dry-run' in args):
+            args.insert(0, '--no-dry-run')
         cgp_data_loader_main(args)
 
     @ignore_resource_warnings
@@ -124,13 +128,20 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
         search_results = self.dss_client.post_search(es_query={'query': {'term': {'uuid': bundle_guid}}}, replica='aws')
         assert search_results['total_hits'] == 0
 
+        dry_run = True if more_args and '--dry-run' in more_args else False
         message("Prepare test input file to load")
         with self._tmp_json_file(test_json, bundle_guid, file_guid, file_version) as tmp_json:
-            message("Load the test input file")
-            self._load_file(tmp_json, more_args=more_args)
+            message("Load the test input file and bundle")
+            self._load_bundle(tmp_json, more_args=more_args)
 
             message("Wait for newly loaded bundle to appear in search results")
-            search_results = self._search_for_bundle(bundle_guid)
+            try:
+                search_results = self._search_for_bundle(bundle_guid)
+            except AssertionError as e:
+                if dry_run and "Not found" in str(e):
+                    return
+                else:
+                    raise
 
             message("Verify that all of the results (except metadata.json) are file references "
                     "and set to not be indexed")

@@ -35,7 +35,7 @@ def main(argv=sys.argv[1:]):
     parser.add_argument("-l", "--log", dest="log_level",
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default="INFO", help="Set the logging level")
-    parser.add_argument('--serial', action='store_false', default=True,
+    parser.add_argument('--serial', action='store_true', default=False,
                         help='Upload bundles serially. This can be useful for debugging')
     parser.add_argument('input_json', metavar='INPUT_JSON',
                         help="Path to the standard JSON format input file")
@@ -76,6 +76,13 @@ def main(argv=sys.argv[1:]):
                                            GOOGLE_PROJECT_ID, options.dry_run,
                                            options.aws_metadata_cred, options.gce_metadata_cred)
     metadata_file_uploader = base_loader.MetadataFileUploader(dss_uploader)
+
+    if not sys.warnoptions:
+        import warnings
+        # Log each unique cloud URL access warning once by default.
+        # This can be overridden using the "PYTHONWARNINGS" environment variable.
+        # See: https://docs.python.org/3/library/warnings.html
+        warnings.simplefilter('default', 'CloudUrlAccessWarning', append=True)
 
     bundle_uploader = StandardFormatBundleUploader(dss_uploader, metadata_file_uploader)
     logging.info(f'Uploading {"serially" if options.serial else "concurrently"}')
