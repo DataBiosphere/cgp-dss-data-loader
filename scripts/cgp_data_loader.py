@@ -7,6 +7,7 @@ Script to load files and bundles into the HCA DSS.
 import logging
 import os
 import sys
+import argparse
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
@@ -17,7 +18,6 @@ from util import load_json_from_file, suppress_verbose_logging
 
 
 def main(argv=sys.argv[1:]):
-    import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     dry_run_group = parser.add_mutually_exclusive_group(required=True)
     dry_run_group.add_argument("--dry-run", dest="dry_run", action="store_true",
