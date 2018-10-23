@@ -30,6 +30,7 @@ import boto3
 import botocore
 import requests
 from boto3.s3.transfer import TransferConfig
+from google.oauth2.credentials import Credentials
 from cloud_blobstore import s3
 from dcplib import s3_multipart
 from dcplib.checksumming_io import ChecksummingBufferedReader
@@ -44,14 +45,18 @@ logger = logging.getLogger(__name__)
 
 CREATOR_ID = 20
 
+
 class CloudUrlAccessWarning(Warning):
     """Warning when a cloud URL could not be accessed for any reason"""
+
 
 class CloudUrlAccessForbidden(CloudUrlAccessWarning):
     """Warning when a cloud URL could not be accessed due to authorization issues"""
 
+
 class CloudUrlNotFound(CloudUrlAccessWarning):
     """Warning when a cloud URL was not found"""
+
 
 class FileURLError(Exception):
     """Thrown when a file cannot be accessed by the given URl"""
@@ -126,9 +131,9 @@ class DssUploader:
         if not gce_meta_cred:
             return None
 
-        with open(gce_meta_cred, 'r') as f:
-            project, credentials = [i.strip() for i in f.read().split(',')]
-        return Client(project=project, credentials=credentials)
+        # '/home/quokka/.config/gcloud/application_default_credentials.json'
+        credentials = Credentials(token=None).from_authorized_user_file(gce_meta_cred)
+        return Client(project=self.google_project_id, credentials=credentials)
 
     def upload_cloud_file_by_reference(self,
                                        filename: str,
@@ -165,7 +170,6 @@ class DssUploader:
         :raises MissingFileSize: If no input file size is available for file to be loaded by reference
         :raises InconsistentFileSizeValues: If file sizes are inconsistent for file to be loaded by reference
         """
-
         def _create_file_reference(file_cloud_urls: set, size: int, guid: str) -> dict:
             """
             Format a file's metadata into a dictionary for uploading as a json to support the approach
@@ -179,7 +183,6 @@ class DssUploader:
             :param size: file size in bytes from input data
             :return: A dictionary of metadata values.
             """
-
             input_metadata = dict(size=size)
             s3_metadata: Dict[str, Any] = dict()
             gs_metadata: Dict[str, Any] = dict()
@@ -242,7 +245,6 @@ class DssUploader:
             gs_bucket = client.bucket(bucket, self.google_project_id)
             blob_obj = gs_bucket.get_blob(key)
             if blob_obj is not None:
-                metadata = dict()
                 metadata['size'] = blob_obj.size
                 metadata['content-type'] = blob_obj.content_type
                 metadata['crc32c'] = binascii.hexlify(base64.b64decode(blob_obj.crc32c)).decode("utf-8").lower()
@@ -251,7 +253,7 @@ class DssUploader:
                 warn(f'Could not find "gs://{bucket}/{key}"'
                      ' The GS file metadata for this file reference will be missing.',
                      CloudUrlNotFound)
-                return dict()
+                return metadata
 
         def _consolidate_metadata(file_cloud_urls: set,
                                   input_metadata: Dict[str, Any],

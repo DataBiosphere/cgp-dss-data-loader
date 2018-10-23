@@ -11,7 +11,6 @@ import iso8601
 from loader import base_loader
 from loader.base_loader import FileURLError, CloudUrlNotFound
 from loader.standard_loader import StandardFormatBundleUploader, ParsedBundle, ParseError, ParsedDataFile
-from scripts.cgp_data_loader import GOOGLE_PROJECT_ID
 from tests import ignore_resource_warnings
 from tests.abstract_loader_test import AbstractLoaderTest
 from util import load_json_from_file, tz_utc_now, utc_now
@@ -31,7 +30,7 @@ class TestLoader(AbstractLoaderTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket,
-                                                   GOOGLE_PROJECT_ID, False)
+                                                   'platform-dev-178517', False)
         cls.metadata_uploader = base_loader.MetadataFileUploader(cls.dss_uploader)
 
         # create test bucket and upload test files

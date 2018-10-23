@@ -15,10 +15,6 @@ from loader import base_loader
 from loader.standard_loader import StandardFormatBundleUploader
 from util import load_json_from_file, suppress_verbose_logging
 
-# Google Cloud Access
-# TODO Make GOOGLE_PROJECT_ID configurable via a command-line option
-GOOGLE_PROJECT_ID = "platform-dev-178517"  # For requester pays buckets
-
 
 def main(argv=sys.argv[1:]):
     import argparse
@@ -39,20 +35,22 @@ def main(argv=sys.argv[1:]):
                         help='Upload bundles serially. This can be useful for debugging')
     parser.add_argument('input_json', metavar='INPUT_JSON',
                         help="Path to the standard JSON format input file")
-    parser.add_argument('--aws_metadata_cred', required=False, default=None,
-                        help="The loader by default needs no additional credentials to "
-                             "access public references, but when attempting to access "
-                             "private cloud files in order to determine size and hash "
-                             "metadata it may be blocked.  This field supplies a "
-                             "path to a file containing additional credentials "
-                             "needed to access the referenced files directly.")
-    parser.add_argument('--gce_metadata_cred', required=False, default=None,
-                        help="The loader by default needs no additional credentials to "
-                             "access public references, but when attempting to access "
-                             "private cloud files in order to determine size and hash "
-                             "metadata it may be blocked.  This field supplies a "
-                             "path to a file containing additional credentials "
-                             "needed to access the referenced files directly.")
+    parser.add_argument('-p', '--project-id', dest='project_id', default='platform-dev-178517',
+                        help='Specify the Google project ID.')
+    parser.add_argument('--aws-metadata-cred', dest='aws_metadata_cred', default=None,
+                        help='The loader by default needs no additional credentials to '
+                             'access public references, but when attempting to access '
+                             'private cloud files in order to determine size and hash '
+                             'metadata it may be blocked.  This field supplies a '
+                             'path to a file containing additional credentials '
+                             'needed to access the referenced files directly.')
+    parser.add_argument('--gce-metadata-cred', dest='gce_metadata_cred', default=None,
+                        help='The loader by default needs no additional credentials to '
+                             'access public references, but when attempting to access '
+                             'private cloud files in order to determine size and hash '
+                             'metadata it may be blocked.  This field supplies a '
+                             'path to a file containing additional credentials '
+                             'needed to access the referenced files directly.')
 
     options = parser.parse_args(argv)
 
@@ -73,7 +71,7 @@ def main(argv=sys.argv[1:]):
                         '\n{options.gce_metadata_cred}\n')
 
     dss_uploader = base_loader.DssUploader(options.dss_endpoint, options.staging_bucket,
-                                           GOOGLE_PROJECT_ID, options.dry_run,
+                                           options.project_id, options.dry_run,
                                            options.aws_metadata_cred, options.gce_metadata_cred)
     metadata_file_uploader = base_loader.MetadataFileUploader(dss_uploader)
 
