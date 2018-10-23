@@ -122,9 +122,15 @@ class DssUploader:
         if not aws_meta_cred:
             return None
 
+        client = boto3.client('sts')
         with open(aws_meta_cred, 'r') as f:
-            access_key, secret_key = [i.strip() for i in f.read().split(',')]
-        return boto3.client('s3', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+            rolearn = f.read().strip()  # 'arn:aws:iam::************:role/ROLE_NAME_HERE'
+        assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName='NIH-Test', DurationSeconds=900)
+        credentials = assumed_role['Credentials']
+        return boto3.client('s3',
+                            aws_access_key_id=credentials['AccessKeyId'],
+                            aws_secret_access_key=credentials['SecretAccessKey'],
+                            aws_session_token=credentials['SessionToken'])
 
     def mk_gs_metadata_client(self, gce_meta_cred):
         """Access Google credentials from a file and supply a client for them."""
