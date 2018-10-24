@@ -303,7 +303,7 @@ class TestLoader(AbstractLoaderTest):
                 self.assertTrue(data_object.file_uuid in loaded_file_uuids)
             for data_object in bundle.data_files:
                 file_json = list(filter(lambda file_json:
-                                        (file_json['uuid'] == data_object.file_uuid and versions_equal(file_json['version'], 
+                                        (file_json['uuid'] == data_object.file_uuid and versions_equal(file_json['version'],
                                                                                                        data_object.file_version)),
                                          bundle_json['files']))[0]
                 assert "dss-type=fileref" in file_json['content-type']
