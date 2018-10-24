@@ -76,7 +76,7 @@ class UnexpectedResponseError(Exception):
 
 class DssUploader:
     def __init__(self, dss_endpoint: str, staging_bucket: str, google_project_id: str, dry_run: bool,
-                 aws_meta_cred: str=None, gce_meta_cred: str=None) -> None:
+                 aws_meta_cred: str=None, gcp_meta_cred: str=None) -> None:
         """
         Functions for uploading files to a given DSS.
 
@@ -92,7 +92,7 @@ class DssUploader:
         :param dry_run: If True, log the actions that would be performed yet don't actually execute them.
                         Otherwise, actually perform the operations.
         :param aws_meta_cred: Optional credentials used to fetch metadata from a private bucket.
-        :param gce_meta_cred: Optional credentials used to fetch metadata from a private bucket.
+        :param gcp_meta_cred: Optional credentials used to fetch metadata from a private bucket.
         """
         self.dss_endpoint = dss_endpoint
         self.staging_bucket = staging_bucket
@@ -104,8 +104,8 @@ class DssUploader:
 
         # optional clients for fetching protected metadata that the
         # main credentials may not have access to
-        self.s3_metadata_client = self.mk_s3_metadata_client(aws_meta_cred)
-        self.gs_metadata_client = self.mk_gs_metadata_client(gce_meta_cred)
+        self.s3_metadata_client = self.get_s3_metadata_client(aws_meta_cred)
+        self.gs_metadata_client = self.get_gs_metadata_client(gcp_meta_cred)
 
         # Work around problems with DSSClient initialization when there is
         # existing HCA configuration. The following issue has been submitted:
@@ -117,17 +117,24 @@ class DssUploader:
         dss_config['DSSClient'].swagger_url = f'{self.dss_endpoint}/swagger.json'
         self.dss_client = DSSClient(config=dss_config)
 
-    def mk_s3_metadata_client(self, aws_meta_cred):
-        """Access AWS credentials from a file and supply a client for them."""
+    @staticmethod
+    def get_s3_metadata_client(aws_meta_cred):
+        """
+        Access AWS credentials from a file and supply a client for them.
+
+        :param aws_meta_cred: File containing an AWS ARN for an AssumedRole, e.g.:
+                              'arn:aws:iam::************:role/ROLE_NAME_HERE'
+        :return: An AWS s3 client object authorized with the above credentials or None.
+        """
         if not aws_meta_cred:
             return None
 
         client = boto3.client('sts')
         with open(aws_meta_cred, 'r') as f:
-            rolearn = f.read().strip()  # 'arn:aws:iam::************:role/ROLE_NAME_HERE'
+            rolearn = f.read().strip()
 
-        # 43200 seconds is 12 hours ()
-        # This setting can have a value from 900 seconds to 12 hours (as of 10.23.2018).
+        # This setting can have a value from 900s to 43200s (as of 10.23.2018).
+        # 900s = 15 min; 43200s = 12 hours
         # https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html
         assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName='NIH-Test', DurationSeconds=43199)
 
@@ -137,13 +144,20 @@ class DssUploader:
                             aws_secret_access_key=credentials['SecretAccessKey'],
                             aws_session_token=credentials['SessionToken'])
 
-    def mk_gs_metadata_client(self, gce_meta_cred):
-        """Access Google credentials from a file and supply a client for them."""
-        if not gce_meta_cred:
+    def get_gs_metadata_client(self, gcp_meta_cred):
+        """
+        Access Google credentials from a file and supply a client for them.
+
+        :param gcp_meta_cred: File containing user credentials, usually generated via:
+                                gcloud auth application-default login
+                              Default location:
+                                '/home/<user>/.config/gcloud/application_default_credentials.json'
+        :return: A google storage client object authorized with the above credentials or None.
+        """
+        if not gcp_meta_cred:
             return None
 
-        # '/home/quokka/.config/gcloud/application_default_credentials.json'
-        credentials = Credentials(token=None).from_authorized_user_file(gce_meta_cred)
+        credentials = Credentials(token=None).from_authorized_user_file(gcp_meta_cred)
         return Client(project=self.google_project_id, credentials=credentials)
 
     def upload_cloud_file_by_reference(self,
@@ -275,13 +289,14 @@ class DssUploader:
             Consolidates cloud file metadata to create the JSON used to load by reference
             into the DSS.
 
-            :param input_metadata:
+            :param input_metadata: An initial dictionary of dict(size=size) to track file sizes,
+                                   which this function will recursively change.
             :param file_cloud_urls: A set of 'gs://' and 's3://' bucket URLs.
                                     e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
             :param s3_metadata: Dictionary of meta data produced by _get_s3_file_metadata().
             :param gs_metadata: Dictionary of meta data produced by _get_gs_file_metadata().
             :param guid: An optional additional/alternate data identifier/alias to associate with the file
-            e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
+                         e.g. "dg.4503/887388d7-a974-4259-86af-f5305172363d"
             :return: A dictionary of cloud file metadata values
             """
 

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 class TestBaseLoader(AbstractLoaderTest):
     """Unittests for base_loader.py."""
+    # TODO: add a test in the integration tests
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -23,40 +24,40 @@ class TestBaseLoader(AbstractLoaderTest):
                                                    cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
         cls.aws_meta_cred = os.path.abspath('test_data/aws.json')
-        # file containing valid GCE credentials
-        cls.gce_meta_cred = os.path.abspath('test_data/gce.json')
+        # file containing valid GCP credentials
+        cls.gcp_meta_cred = os.path.abspath('test_data/gcp.json')
 
         # file containing AWS AssumedRole ARN that can't access the data
         cls.bad_aws_meta_cred = os.path.abspath('test_data/aws.json')
-        # file containing GCE credentials that can't access the data
-        cls.bad_gce_meta_cred = os.path.abspath('test_data/gce.json')
+        # file containing GCP credentials that can't access the data
+        cls.bad_gcp_meta_cred = os.path.abspath('test_data/gcp.json')
 
         cls.aws_key = ''
         cls.aws_bucket = ''
 
-        cls.gce_key = ''
-        cls.gce_bucket = ''
+        cls.gcp_key = ''
+        cls.gcp_bucket = ''
 
     def aws_metadata(self, credentials):
-        """"""
-        metaclient = self.dss_uploader.mk_s3_metadata_client(credentials)
+        """Fetches a credentialed client using the get_gs_metadata_client() function."""
+        metaclient = self.dss_uploader.get_s3_metadata_client(credentials)
         response = metaclient.head_object(Bucket=self.aws_bucket, Key=self.aws_key, RequestPayer="requester")
         return response
 
     def google_metadata(self, credentials):
-        """"""
-        metaclient = self.dss_uploader.mk_gs_metadata_client(credentials)
-        gs_bucket = metaclient.bucket(self.gce_bucket, self.google_project_id)
-        return gs_bucket.get_blob(self.gce_key)
+        """Fetches a credentialed client using the get_s3_metadata_client() function."""
+        metaclient = self.dss_uploader.get_gs_metadata_client(credentials)
+        gs_bucket = metaclient.bucket(self.gcp_bucket, self.google_project_id)
+        return gs_bucket.get_blob(self.gcp_key)
 
     # def test_fetch_private_google_metadata_size(self):
-    #     assert self.google_metadata(self.gce_meta_cred).size
+    #     assert self.google_metadata(self.gcp_meta_cred).size
     #
     # def test_fetch_private_google_metadata_hash(self):
-    #     assert self.google_metadata(self.gce_meta_cred).crc32c
+    #     assert self.google_metadata(self.gcp_meta_cred).crc32c
     #
     # def test_fetch_private_google_metadata_type(self):
-    #     assert self.google_metadata(self.gce_meta_cred).content_type
+    #     assert self.google_metadata(self.gcp_meta_cred).content_type
     #
     # def test_fetch_private_aws_metadata_size(self):
     #     assert self.aws_metadata(self.aws_meta_cred)['ContentLength']
@@ -68,7 +69,7 @@ class TestBaseLoader(AbstractLoaderTest):
     #     assert self.aws_metadata(self.aws_meta_cred)['ContentType']
     #
     # def test_bad_google_metadata_fetch(self):
-    #     assert self.google_metadata(self.bad_gce_meta_cred) is None
+    #     assert self.google_metadata(self.bad_gcp_meta_cred) is None
     #
     # def test_bad_aws_metadata_fetch(self):
     #     self.assertRaises(self.aws_metadata(self.bad_aws_meta_cred), ClientError)

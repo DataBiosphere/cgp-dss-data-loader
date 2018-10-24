@@ -47,7 +47,7 @@ If the data is public, this is unnecessary.  However, if it is private data, a s
 needs to be specified.
 
 ### (Optional) GCP Metadata Credentials
-Make sure you have gcloud installed and run:
+Make sure you have [gcloud](https://cloud.google.com/sdk/install) installed and run:
 
 1. gcloud auth application-default login
 
@@ -55,18 +55,22 @@ Make sure you have gcloud installed and run:
 
 1. This will generate a json with your user credentials with a path similar to:
 
-    `/home/quokka/.config/gcloud/application_default_credentials.json`
+    `/home/<user>/.config/gcloud/application_default_credentials.json`
 
 1. Copy this json to another location so that it will not accidentally be used as a default by the main application.
 
 1. This file can then be used by the loader by specifying (as an example):
 
-    `--gce-metadata-cred=/home/quokka/anotherlocation/application_default_credentials.json`
+    `--gce-metadata-cred=/home/<user>/metadata_credentials/application_default_credentials.json`
 
 ### (Optional) AWS Metadata Credentials
 This involves the setup of an AssumedRole on the account that your main AWS credentials have access to.  If 
 this is done already, all you need to do is supply a file containing the AWS ARN to that assumed role and the
 loader will assume the role on your behalf when gathering information about the metadata.
+
+Additional information on setting up an AssumedRole through AWS:
+- https://docs.aws.amazon.com/IAM/latest/UserGuide/tutorial_cross-account-with-roles.html
+- https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-api.html
 
 1. Write a file containing the ARN, for example:
 
@@ -74,7 +78,7 @@ loader will assume the role on your behalf when gathering information about the 
 
 1. This file can then be used by the loader by specifying (as an example):
 
-    `--aws-metadata-cred=/home/quokka/aws_credentials.json`
+    `--aws-metadata-cred=/home/<user>/aws_credentials.json`
 
 ## Running Tests
 Run:
@@ -97,14 +101,14 @@ Run:
 
 1. Now that we have our new transformed output we can run it with the loader.
 
-   If you used the standard transformer use the command:
+   If accessing public access data, use the command:
 
    ```
    dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET transformed-topmed-public.json
    ```
    
    Alternatively, if supplying additional credentials for private data:
-   
+
    ```
    dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET -p GOOGLE_PROJECT_ID --gce-metadata-cred=gs_credentials.json --aws-metadata-cred=aws_credentials.json gtex-GTEx-v7_sanitized_pp.json
    ```

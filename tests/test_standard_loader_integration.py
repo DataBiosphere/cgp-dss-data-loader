@@ -36,6 +36,7 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
             jsonschema.validate(bundle, standard_schema)
 
     def test_basic_input_format_loading_from_cli_serial(self):
+        # TODO: Test is flaky; Investigate; Possibly add retries?
         self._test_gen3_loading_from_cli(self.test_file, more_args=['--serial'])
 
     def test_basic_input_format_loading_from_cli_concurrent(self):

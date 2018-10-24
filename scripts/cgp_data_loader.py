@@ -40,13 +40,13 @@ def main(argv=sys.argv[1:]):
     parser.add_argument('--aws-metadata-cred', dest='aws_metadata_cred', default=None,
                         help='The loader by default needs no additional credentials to '
                              'access public references, but when attempting to access '
-                             'private cloud files in order to determine size and hash '
+                             'private AWS files in order to determine size and hash '
                              'metadata it may be blocked.  This field supplies a '
                              'path to a file containing additional credentials '
                              'needed to access the referenced files directly.')
-    parser.add_argument('--gce-metadata-cred', dest='gce_metadata_cred', default=None,
+    parser.add_argument('--gcp-metadata-cred', dest='gcp_metadata_cred', default=None,
                         help='The loader by default needs no additional credentials to '
-                             'access public references, but when attempting to access '
+                             'access Google references, but when attempting to access '
                              'private cloud files in order to determine size and hash '
                              'metadata it may be blocked.  This field supplies a '
                              'path to a file containing additional credentials '
@@ -64,15 +64,15 @@ def main(argv=sys.argv[1:]):
     logging.getLogger(__name__)
     suppress_verbose_logging()
 
-    if bool(options.aws_metadata_cred) != bool(options.gce_metadata_cred):
+    if bool(options.aws_metadata_cred) != bool(options.gcp_metadata_cred):
         logging.warning(f'Additional credentials are only specified for one cloud '
                         '(if both are not supplied, things may not go as planned): '
                         '\n{options.aws_metadata_cred}'
-                        '\n{options.gce_metadata_cred}\n')
+                        '\n{options.gcp_metadata_cred}\n')
 
     dss_uploader = base_loader.DssUploader(options.dss_endpoint, options.staging_bucket,
                                            options.project_id, options.dry_run,
-                                           options.aws_metadata_cred, options.gce_metadata_cred)
+                                           options.aws_metadata_cred, options.gcp_metadata_cred)
     metadata_file_uploader = base_loader.MetadataFileUploader(dss_uploader)
 
     if not sys.warnoptions:
