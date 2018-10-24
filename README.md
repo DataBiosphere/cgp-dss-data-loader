@@ -64,6 +64,9 @@ Make sure you have [gcloud](https://cloud.google.com/sdk/install) installed and 
     `--gce-metadata-cred=/home/<user>/metadata_credentials/application_default_credentials.json`
 
 ### (Optional) AWS Metadata Credentials
+**One caveat, AWS allows a maximum of 12 hours under an assumed role for a single session, so 
+if loading takes longer than that, it may break.
+
 This involves the setup of an AssumedRole on the account that your main AWS credentials have access to.  If 
 this is done already, all you need to do is supply a file containing the AWS ARN to that assumed role and the
 loader will assume the role on your behalf when gathering information about the metadata.
