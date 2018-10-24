@@ -39,15 +39,15 @@ def main(argv=sys.argv[1:]):
                         help='Specify the Google project ID.')
     parser.add_argument('--aws-metadata-cred', dest='aws_metadata_cred', default=None,
                         help='The loader by default needs no additional credentials to '
-                             'access public references, but when attempting to access '
+                             'access public AWS references, but when attempting to access '
                              'private AWS files in order to determine size and hash '
                              'metadata it may be blocked.  This field supplies a '
                              'path to a file containing additional credentials '
                              'needed to access the referenced files directly.')
     parser.add_argument('--gcp-metadata-cred', dest='gcp_metadata_cred', default=None,
                         help='The loader by default needs no additional credentials to '
-                             'access Google references, but when attempting to access '
-                             'private cloud files in order to determine size and hash '
+                             'access public Google references, but when attempting to access '
+                             'private Google files in order to determine size and hash '
                              'metadata it may be blocked.  This field supplies a '
                              'path to a file containing additional credentials '
                              'needed to access the referenced files directly.')
