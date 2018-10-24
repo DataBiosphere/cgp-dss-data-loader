@@ -1,2 +1,2 @@
 flake8
-mypy >= 0.600
+mypy >= 0.630

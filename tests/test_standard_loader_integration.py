@@ -37,6 +37,7 @@ class TestStandardInputFormatLoading(AbstractLoaderTest):
 
     def test_basic_input_format_loading_from_cli_serial(self):
         # TODO: Test is flaky; Investigate; Possibly add retries?
+        # TODO: See: https://github.com/DataBiosphere/cgp-dss-data-loader/pull/49
         self._test_gen3_loading_from_cli(self.test_file, more_args=['--serial'])
 
     def test_basic_input_format_loading_from_cli_concurrent(self):

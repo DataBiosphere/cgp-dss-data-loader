@@ -76,7 +76,7 @@ class UnexpectedResponseError(Exception):
 
 class DssUploader:
     def __init__(self, dss_endpoint: str, staging_bucket: str, google_project_id: str, dry_run: bool,
-                 aws_meta_cred: str=None, gcp_meta_cred: str=None) -> None:
+                 aws_meta_cred: str = None, gcp_meta_cred: str = None) -> None:
         """
         Functions for uploading files to a given DSS.
 
@@ -133,7 +133,7 @@ class DssUploader:
         with open(aws_meta_cred, 'r') as f:
             rolearn = f.read().strip()
 
-        # This setting can have a value from 900s to 43200s (as of 10.23.2018).
+        # DurationSeconds can have a value from 900s to 43200s (as of 10.23.2018).
         # 900s = 15 min; 43200s = 12 hours
         # https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html
         assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName='NIH-Test', DurationSeconds=43199)
@@ -166,7 +166,7 @@ class DssUploader:
                                        file_cloud_urls: set,
                                        size: int,
                                        guid: str,
-                                       file_version: str=None) -> tuple:
+                                       file_version: str = None) -> tuple:
         """
         Loads the given cloud file into the DSS by reference, rather than by copying it into the DSS.
         Because the HCA DSS per se does not support loading by reference, this is currently implemented
@@ -341,8 +341,8 @@ class DssUploader:
     def upload_dict_as_file(self, value: dict,
                             filename: str,
                             file_uuid: str,
-                            file_version: str=None,  # RFC3339
-                            content_type=None):
+                            file_version: str = None,  # RFC3339
+                            content_type: str = None):
         """
         Create a JSON file in the DSS containing the given dict.
 
@@ -367,8 +367,8 @@ class DssUploader:
 
     def upload_local_file(self, path: str,
                           file_uuid: str,
-                          file_version: str=None,
-                          content_type=None):
+                          file_version: str = None,
+                          content_type: str = None):
         """
         Upload a file from the local file system to the DSS.
 
@@ -471,8 +471,8 @@ class DssUploader:
     def _upload_tagged_cloud_file_to_dss_by_copy(self, source_bucket: str,
                                                  source_key: str,
                                                  file_uuid: str,
-                                                 file_version: str=None,
-                                                 timeout_seconds=1200):
+                                                 file_version: str = None,
+                                                 timeout_seconds: int = 1200):
         """
         Uploads a tagged file contained in a cloud bucket to the DSS by copy.
         This is typically used to update a tagged file from a staging bucket into the DSS.
