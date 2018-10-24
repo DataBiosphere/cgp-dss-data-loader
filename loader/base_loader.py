@@ -125,7 +125,12 @@ class DssUploader:
         client = boto3.client('sts')
         with open(aws_meta_cred, 'r') as f:
             rolearn = f.read().strip()  # 'arn:aws:iam::************:role/ROLE_NAME_HERE'
-        assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName='NIH-Test', DurationSeconds=900)
+
+        # 43200 seconds is 12 hours ()
+        # This setting can have a value from 900 seconds to 12 hours (as of 10.23.2018).
+        # https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html
+        assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName='NIH-Test', DurationSeconds=43199)
+
         credentials = assumed_role['Credentials']
         return boto3.client('s3',
                             aws_access_key_id=credentials['AccessKeyId'],
