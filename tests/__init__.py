@@ -4,7 +4,7 @@ import time
 import warnings
 
 
-def eventually(timeout_seconds: float, retry_interval_seconds: float, errors: set={AssertionError}):
+def eventually(timeout_seconds: float, retry_interval_seconds: float, errors: set = {AssertionError}):
     """
     @eventually runs a test until all assertions are satisfied or a timeout is reached.
     :param timeout_seconds: time in seconds until the test fails

@@ -44,7 +44,7 @@ class StandardFormatBundleUploader:
                                 '-(?P<mday>0[1-9]|[12][0-9]|3[01])'
                                 'T(?P<hour>[01][0-9]|2[0-3]):(?P<minute>[0-5][0-9]):(?P<second>[0-5][0-9]|60)'
                                 '(?P<secfrac>\.[0-9]+)?'
-                                '(Z|(\+|-)(?P<offset_hour>[01][0-9]|2[0-3]):(?P<offset_minute>[0-5][0-9]))?$')
+                                '(Z|(\+|-)(?P<offset_hour>[01][0-9]|2[0-3]):(?P<offset_minute>[0-5][0-9]))?$') # noqa
 
     def __init__(self, dss_uploader: DssUploader, metadata_file_uploader: MetadataFileUploader) -> None:
         self.dss_uploader = dss_uploader
@@ -216,7 +216,7 @@ class StandardFormatBundleUploader:
             self.bundles_loaded.append(parsed_bundle)
             logger.info(f'Successfully loaded bundle {parsed_bundle.bundle_uuid}')
 
-    def load_all_bundles(self, input_json: typing.List[dict], concurrently: bool=False) -> bool:
+    def load_all_bundles(self, input_json: typing.List[dict], concurrently: bool = False) -> bool:
         success = True
         logger.info(f'Going to load {len(input_json)} bundle{"" if len(input_json) == 1 else "s"}')
         try:
