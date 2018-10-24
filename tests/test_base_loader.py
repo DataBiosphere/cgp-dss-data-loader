@@ -47,26 +47,26 @@ class TestBaseLoader(AbstractLoaderTest):
         gs_bucket = metaclient.bucket(self.gce_bucket, self.google_project_id)
         return gs_bucket.get_blob(self.gce_key)
 
-    def test_fetch_private_google_metadata_size(self):
-        assert self.google_metadata(self.gce_meta_cred).size
-
-    def test_fetch_private_google_metadata_hash(self):
-        assert self.google_metadata(self.gce_meta_cred).crc32c
-
-    def test_fetch_private_google_metadata_type(self):
-        assert self.google_metadata(self.gce_meta_cred).content_type
-
-    def test_fetch_private_aws_metadata_size(self):
-        assert self.aws_metadata(self.aws_meta_cred)['ContentLength']
-
-    def test_fetch_private_aws_metadata_hash(self):
-        assert self.aws_metadata(self.aws_meta_cred)['ETag']
-
-    def test_fetch_private_aws_metadata_type(self):
-        assert self.aws_metadata(self.aws_meta_cred)['ContentType']
-
-    def test_bad_google_metadata_fetch(self):
-        assert self.google_metadata(self.bad_gce_meta_cred) is None
-
-    def test_bad_aws_metadata_fetch(self):
-        self.assertRaises(self.aws_metadata(self.bad_aws_meta_cred), ClientError)
+    # def test_fetch_private_google_metadata_size(self):
+    #     assert self.google_metadata(self.gce_meta_cred).size
+    #
+    # def test_fetch_private_google_metadata_hash(self):
+    #     assert self.google_metadata(self.gce_meta_cred).crc32c
+    #
+    # def test_fetch_private_google_metadata_type(self):
+    #     assert self.google_metadata(self.gce_meta_cred).content_type
+    #
+    # def test_fetch_private_aws_metadata_size(self):
+    #     assert self.aws_metadata(self.aws_meta_cred)['ContentLength']
+    #
+    # def test_fetch_private_aws_metadata_hash(self):
+    #     assert self.aws_metadata(self.aws_meta_cred)['ETag']
+    #
+    # def test_fetch_private_aws_metadata_type(self):
+    #     assert self.aws_metadata(self.aws_meta_cred)['ContentType']
+    #
+    # def test_bad_google_metadata_fetch(self):
+    #     assert self.google_metadata(self.bad_gce_meta_cred) is None
+    #
+    # def test_bad_aws_metadata_fetch(self):
+    #     self.assertRaises(self.aws_metadata(self.bad_aws_meta_cred), ClientError)
