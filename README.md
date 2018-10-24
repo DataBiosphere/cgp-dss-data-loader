@@ -78,7 +78,7 @@ Additional information on setting up an AssumedRole through AWS:
 
 1. This file can then be used by the loader by specifying (as an example):
 
-    `--aws-metadata-cred=/home/<user>/aws_credentials.json`
+    `--aws-metadata-cred=/home/<user>/aws_credentials.config`
 
 ## Running Tests
 Run:
@@ -110,7 +110,7 @@ Run:
    Alternatively, if supplying additional credentials for private data:
 
    ```
-   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET -p GOOGLE_PROJECT_ID --gce-metadata-cred=gs_credentials.json --aws-metadata-cred=aws_credentials.json gtex-GTEx-v7_sanitized_pp.json
+   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET -p GOOGLE_PROJECT_ID --gce-metadata-cred=gs_credentials.json --aws-metadata-cred=aws_credentials.config gtex-GTEx-v7_sanitized_pp.json
    ```
 
 1. You did it!

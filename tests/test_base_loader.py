@@ -23,14 +23,14 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket,
                                                    cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
-        cls.aws_meta_cred = os.path.abspath('test_data/aws.json')
+        cls.aws_meta_cred = os.path.abspath('test_data/aws.config')
         # file containing valid GCP credentials
         cls.gcp_meta_cred = os.path.abspath('test_data/gcp.json')
 
         # file containing AWS AssumedRole ARN that can't access the data
-        cls.bad_aws_meta_cred = os.path.abspath('test_data/aws.json')
+        cls.bad_aws_meta_cred = os.path.abspath('test_data/aws_bad.config')
         # file containing GCP credentials that can't access the data
-        cls.bad_gcp_meta_cred = os.path.abspath('test_data/gcp.json')
+        cls.bad_gcp_meta_cred = os.path.abspath('test_data/gcp_bad.json')
 
         cls.aws_key = ''
         cls.aws_bucket = ''
