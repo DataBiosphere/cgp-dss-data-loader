@@ -38,11 +38,13 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.gce_bucket = ''
 
     def aws_metadata(self, credentials):
+        """"""
         metaclient = self.dss_uploader.mk_s3_metadata_client(credentials)
         response = metaclient.head_object(Bucket=self.aws_bucket, Key=self.aws_key, RequestPayer="requester")
         return response
 
     def google_metadata(self, credentials):
+        """"""
         metaclient = self.dss_uploader.mk_gs_metadata_client(credentials)
         gs_bucket = metaclient.bucket(self.gce_bucket, self.google_project_id)
         return gs_bucket.get_blob(self.gce_key)
