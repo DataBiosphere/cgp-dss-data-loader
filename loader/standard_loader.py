@@ -37,14 +37,14 @@ class ParsedBundle(typing.NamedTuple):
 
 
 class StandardFormatBundleUploader:
-    _uuid_regex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+    _uuid_regex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')  # noqa
     # adapted from http://mattallan.org/posts/rfc3339-date-time-validation/
-    _rfc3339_regex = re.compile('^(?P<fullyear>\d{4})'
-                                '-(?P<month>0[1-9]|1[0-2])'
-                                '-(?P<mday>0[1-9]|[12][0-9]|3[01])'
-                                'T(?P<hour>[01][0-9]|2[0-3]):(?P<minute>[0-5][0-9]):(?P<second>[0-5][0-9]|60)'
-                                '(?P<secfrac>\.[0-9]+)?'
-                                '(Z|(\+|-)(?P<offset_hour>[01][0-9]|2[0-3]):(?P<offset_minute>[0-5][0-9]))?$') # noqa
+    _rfc3339_regex = re.compile('^(?P<fullyear>\d{4})'  # noqa
+                                '-(?P<month>0[1-9]|1[0-2])'  # noqa
+                                '-(?P<mday>0[1-9]|[12][0-9]|3[01])'  # noqa
+                                'T(?P<hour>[01][0-9]|2[0-3]):(?P<minute>[0-5][0-9]):(?P<second>[0-5][0-9]|60)'  # noqa
+                                '(?P<secfrac>\.[0-9]+)?'  # noqa
+                                '(Z|(\+|-)(?P<offset_hour>[01][0-9]|2[0-3]):(?P<offset_minute>[0-5][0-9]))?$')  # noqa
 
     def __init__(self, dss_uploader: DssUploader, metadata_file_uploader: MetadataFileUploader) -> None:
         self.dss_uploader = dss_uploader

@@ -302,10 +302,7 @@ class TestLoader(AbstractLoaderTest):
             for data_object in bundle.data_files:
                 self.assertTrue(data_object.file_uuid in loaded_file_uuids)
             for data_object in bundle.data_files:
-                file_json = list(filter(lambda file_json:
-                                        (file_json['uuid'] == data_object.file_uuid and versions_equal(file_json['version'],
-                                                                                                       data_object.file_version)),
-                                         bundle_json['files']))[0]
+                file_json = list(filter(lambda file_json: (file_json['uuid'] == data_object.file_uuid and versions_equal(file_json['version'], data_object.file_version)), bundle_json['files']))[0]  # noqa
                 assert "dss-type=fileref" in file_json['content-type']
                 self._verify_file_reference(data_object, file_json)
 
