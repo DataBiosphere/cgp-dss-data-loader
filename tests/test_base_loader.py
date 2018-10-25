@@ -30,7 +30,7 @@ class TestBaseLoader(AbstractLoaderTest):
         # file containing valid GCP credentials
         cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
         with open(cls.gcp_meta_cred, 'w') as f:
-            json.dump(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS'], f)
+            json.dump(dict(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS']), f)
 
         cls.aws_bucket = 'travis-test-loader-dont-delete'
         cls.aws_key = 'pangur.txt'
