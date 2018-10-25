@@ -23,16 +23,16 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket,
                                                    cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
-        cls.aws_meta_cred = os.path.abspath('test_data/aws.config')
+        cls.aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
         with open(cls.aws_meta_cred, 'w') as f:
             f.write(os.environ['AWS_ROLE_ARN'])
         # file containing valid GCP credentials
-        cls.gcp_meta_cred = os.path.abspath('test_data/gcp.json')
+        cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
 
         # file containing AWS AssumedRole ARN that can't access the data
-        cls.bad_aws_meta_cred = os.path.abspath('test_data/aws_bad.config')
+        cls.bad_aws_meta_cred = os.path.abspath('tests/test_data/aws_bad.config')
         # file containing GCP credentials that can't access the data
-        cls.bad_gcp_meta_cred = os.path.abspath('test_data/gcp_bad.json')
+        cls.bad_gcp_meta_cred = os.path.abspath('tests/test_data/gcp_bad.json')
 
         cls.aws_key = 'pangur.txt'
         cls.aws_bucket = 'travis-loader-test-dont-delete'
