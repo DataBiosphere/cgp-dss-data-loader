@@ -23,11 +23,11 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.google_project_id = 'platform-dev-178517'
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
-        cls.aws_meta_cred = os.path.abspath('test_data/aws.config')
+        cls.aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
         with open(cls.aws_meta_cred, 'w') as f:
             f.write(os.environ['AWS_ROLE_ARN'])
         # file containing valid GCP credentials
-        cls.gcp_meta_cred = os.path.abspath('test_data/gcp.json')
+        cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
 
         # file containing AWS AssumedRole ARN that can't access the data
         cls.bad_aws_meta_cred = os.path.abspath('tests/test_data/aws_bad.config')
@@ -82,7 +82,7 @@ class TestBaseLoader(AbstractLoaderTest):
     def test_fetch_private_aws_metadata_type(self):
         """Fetch file content-type."""
         assert self.aws_metadata(self.aws_meta_cred)['ContentType']
-    #
+
     # def test_bad_google_metadata_fetch(self):
     #     assert self.google_metadata(self.bad_gcp_meta_cred) is None
 
