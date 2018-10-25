@@ -119,7 +119,7 @@ class DssUploader:
         self.dss_client = DSSClient(config=dss_config)
 
     @staticmethod
-    def get_s3_metadata_client(aws_meta_cred, duration=43199):
+    def get_s3_metadata_client(aws_meta_cred, session='NIH-Test', duration=43199):
         """
         Access AWS credentials from a file and supply a client for them.
 
@@ -139,7 +139,7 @@ class DssUploader:
         # 900s = 15 min; 43200s = 12 hours
         # https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html
         print(rolearn)
-        assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName='NIH-Test', DurationSeconds=duration)
+        assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName=session, DurationSeconds=duration)
 
         credentials = assumed_role['Credentials']
         return boto3.client('s3',
