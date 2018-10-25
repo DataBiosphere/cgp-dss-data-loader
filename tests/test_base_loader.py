@@ -28,20 +28,14 @@ class TestBaseLoader(AbstractLoaderTest):
             f.write('arn:aws:iam::719818754276:role/travis_access_test_bucket')
         # file containing valid GCP credentials
         cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
+        with open(cls.gcp_meta_cred) as f:
+            f.write(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS'])
 
-        # file containing AWS AssumedRole ARN that can't access the data
-        cls.bad_aws_meta_cred = os.path.abspath('tests/test_data/aws_bad.config')
-        with open(cls.bad_aws_meta_cred, 'w') as f:
-            # default role provided by AWS that travis shouldn't have access to
-            f.write('arn:aws:iam::719818754276:role/AmazonAPIGatewayPushToCloudWatchLogs')
-        # file containing GCP credentials that can't access the data
-        cls.bad_gcp_meta_cred = os.path.abspath('tests/test_data/gcp_bad.json')
-
-        cls.aws_key = 'pangur.txt'
         cls.aws_bucket = 'travis-test-loader-dont-delete'
+        cls.aws_key = 'pangur.txt'
 
-        cls.gcp_key = ''
-        cls.gcp_bucket = ''
+        cls.gcp_bucket = 'travis-test-loader-dont-delete'
+        cls.gcp_key = 'drinking.txt'
 
     @classmethod
     def tearDownClass(cls):
@@ -62,14 +56,14 @@ class TestBaseLoader(AbstractLoaderTest):
         gs_bucket = metaclient.bucket(self.gcp_bucket, self.google_project_id)
         return gs_bucket.get_blob(self.gcp_key)
 
-    # def test_fetch_private_google_metadata_size(self):
-    #     assert self.google_metadata(self.gcp_meta_cred).size
-    #
-    # def test_fetch_private_google_metadata_hash(self):
-    #     assert self.google_metadata(self.gcp_meta_cred).crc32c
-    #
-    # def test_fetch_private_google_metadata_type(self):
-    #     assert self.google_metadata(self.gcp_meta_cred).content_type
+    def test_fetch_private_google_metadata_size(self):
+        assert self.google_metadata(self.gcp_meta_cred).size
+
+    def test_fetch_private_google_metadata_hash(self):
+        assert self.google_metadata(self.gcp_meta_cred).crc32c
+
+    def test_fetch_private_google_metadata_type(self):
+        assert self.google_metadata(self.gcp_meta_cred).content_type
     #
     def test_fetch_private_aws_metadata_size(self):
         """Fetch file size."""
@@ -84,7 +78,7 @@ class TestBaseLoader(AbstractLoaderTest):
         assert self.aws_metadata(self.aws_meta_cred)['ContentType']
 
     # def test_bad_google_metadata_fetch(self):
-    #     assert self.google_metadata(self.bad_gcp_meta_cred) is None
+    #     assert not self.google_metadata(self.bad_gcp_meta_cred)
 
     def test_bad_aws_metadata_fetch(self):
         assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
