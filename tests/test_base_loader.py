@@ -25,7 +25,7 @@ class TestBaseLoader(AbstractLoaderTest):
         # file containing a valid AWS AssumedRole ARN
         cls.aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
         with open(cls.aws_meta_cred, 'w') as f:
-            f.write(os.environ['AWS_ROLE_ARN'])
+            f.write('arn:aws:iam::719818754276:role/travis_access_test_bucket')
         # file containing valid GCP credentials
         cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
 
@@ -87,4 +87,4 @@ class TestBaseLoader(AbstractLoaderTest):
     #     assert self.google_metadata(self.bad_gcp_meta_cred) is None
 
     def test_bad_aws_metadata_fetch(self):
-        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)['size']
+        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
