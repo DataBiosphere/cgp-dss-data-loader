@@ -38,7 +38,7 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.bad_gcp_meta_cred = os.path.abspath('tests/test_data/gcp_bad.json')
 
         cls.aws_key = 'pangur.txt'
-        cls.aws_bucket = 'travis-loader-test-dont-delete'
+        cls.aws_bucket = 'travis-test-loader-dont-delete'
 
         cls.gcp_key = ''
         cls.gcp_bucket = ''
@@ -87,4 +87,4 @@ class TestBaseLoader(AbstractLoaderTest):
     #     assert self.google_metadata(self.bad_gcp_meta_cred) is None
 
     def test_bad_aws_metadata_fetch(self):
-        assert self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)['size']
+        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)['size']
