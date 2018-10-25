@@ -94,6 +94,7 @@ class DssUploader:
         :param aws_meta_cred: Optional credentials used to fetch metadata from a private bucket.
         :param gcp_meta_cred: Optional credentials used to fetch metadata from a private bucket.
         """
+        os.environ['GOOGLE_CLOUD_PROJECT'] = google_project_id
         self.dss_endpoint = dss_endpoint
         self.staging_bucket = staging_bucket
         self.google_project_id = google_project_id
