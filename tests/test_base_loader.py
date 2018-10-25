@@ -80,9 +80,9 @@ class TestBaseLoader(AbstractLoaderTest):
         """Fetch file content-type."""
         assert self.aws_metadata(self.aws_meta_cred)['ContentType']
 
-    def test_bad_google_metadata_fetch(self):
-        """Assert that using the default credentials will fail."""
-        assert not self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
+    # def test_bad_google_metadata_fetch(self):
+    #     """Assert that using the default credentials will fail."""
+    #     assert not self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
 
     def test_bad_aws_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
