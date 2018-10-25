@@ -24,6 +24,8 @@ class TestBaseLoader(AbstractLoaderTest):
                                                    cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
         cls.aws_meta_cred = os.path.abspath('test_data/aws.config')
+        with open(cls.aws_meta_cred, 'w') as f:
+            f.write(os.environ['AWS_ROLE_ARN'])
         # file containing valid GCP credentials
         cls.gcp_meta_cred = os.path.abspath('test_data/gcp.json')
 
@@ -37,6 +39,13 @@ class TestBaseLoader(AbstractLoaderTest):
 
         cls.gcp_key = ''
         cls.gcp_bucket = ''
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists(cls.aws_meta_cred):
+            os.remove(cls.aws_meta_cred)
+        if os.path.exists(cls.gcp_meta_cred):
+            os.remove(cls.gcp_meta_cred)
 
     def aws_metadata(self, credentials):
         """Fetches a credentialed client using the get_gs_metadata_client() function."""
@@ -59,14 +68,14 @@ class TestBaseLoader(AbstractLoaderTest):
     # def test_fetch_private_google_metadata_type(self):
     #     assert self.google_metadata(self.gcp_meta_cred).content_type
     #
-    # def test_fetch_private_aws_metadata_size(self):
-    #     assert self.aws_metadata(self.aws_meta_cred)['ContentLength']
-    #
-    # def test_fetch_private_aws_metadata_hash(self):
-    #     assert self.aws_metadata(self.aws_meta_cred)['ETag']
-    #
-    # def test_fetch_private_aws_metadata_type(self):
-    #     assert self.aws_metadata(self.aws_meta_cred)['ContentType']
+    def test_fetch_private_aws_metadata_size(self):
+        assert self.aws_metadata(self.aws_meta_cred)['ContentLength']
+
+    def test_fetch_private_aws_metadata_hash(self):
+        assert self.aws_metadata(self.aws_meta_cred)['ETag']
+
+    def test_fetch_private_aws_metadata_type(self):
+        assert self.aws_metadata(self.aws_meta_cred)['ContentType']
     #
     # def test_bad_google_metadata_fetch(self):
     #     assert self.google_metadata(self.bad_gcp_meta_cred) is None
