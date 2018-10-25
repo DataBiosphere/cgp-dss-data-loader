@@ -136,6 +136,7 @@ class DssUploader:
         # DurationSeconds can have a value from 900s to 43200s (as of 10.23.2018).
         # 900s = 15 min; 43200s = 12 hours
         # https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html
+        print(rolearn)
         assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName='NIH-Test', DurationSeconds=43199)
 
         credentials = assumed_role['Credentials']
