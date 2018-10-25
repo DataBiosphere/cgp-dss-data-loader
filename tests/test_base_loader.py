@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import boto3
 from botocore.exceptions import ClientError
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
@@ -31,6 +32,9 @@ class TestBaseLoader(AbstractLoaderTest):
 
         # file containing AWS AssumedRole ARN that can't access the data
         cls.bad_aws_meta_cred = os.path.abspath('tests/test_data/aws_bad.config')
+        with open(cls.bad_aws_meta_cred, 'w') as f:
+            # default role provided by AWS that travis shouldn't have access to
+            f.write('arn:aws:iam::719818754276:role/AmazonAPIGatewayPushToCloudWatchLogs')
         # file containing GCP credentials that can't access the data
         cls.bad_gcp_meta_cred = os.path.abspath('tests/test_data/gcp_bad.json')
 
@@ -82,6 +86,6 @@ class TestBaseLoader(AbstractLoaderTest):
     #
     # def test_bad_google_metadata_fetch(self):
     #     assert self.google_metadata(self.bad_gcp_meta_cred) is None
-    #
-    # def test_bad_aws_metadata_fetch(self):
-    #     self.assertRaises(self.aws_metadata(self.bad_aws_meta_cred), ClientError)
+
+    def test_bad_aws_metadata_fetch(self):
+        assert self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
