@@ -34,8 +34,8 @@ class TestBaseLoader(AbstractLoaderTest):
         # file containing GCP credentials that can't access the data
         cls.bad_gcp_meta_cred = os.path.abspath('test_data/gcp_bad.json')
 
-        cls.aws_key = ''
-        cls.aws_bucket = ''
+        cls.aws_key = 'pangur.txt'
+        cls.aws_bucket = 'travis-loader-test-dont-delete'
 
         cls.gcp_key = ''
         cls.gcp_bucket = ''
