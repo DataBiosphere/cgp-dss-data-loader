@@ -28,7 +28,7 @@ class TestBaseLoader(AbstractLoaderTest):
             f.write('arn:aws:iam::719818754276:role/travis_access_test_bucket')
         # file containing valid GCP credentials
         cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
-        with open(cls.gcp_meta_cred) as f:
+        with open(cls.gcp_meta_cred, 'w') as f:
             f.write(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS'])
 
         cls.aws_bucket = 'travis-test-loader-dont-delete'
@@ -57,14 +57,17 @@ class TestBaseLoader(AbstractLoaderTest):
         return gs_bucket.get_blob(self.gcp_key)
 
     def test_fetch_private_google_metadata_size(self):
+        """Fetch file size."""
         assert self.google_metadata(self.gcp_meta_cred).size
 
     def test_fetch_private_google_metadata_hash(self):
+        """Fetch file hash."""
         assert self.google_metadata(self.gcp_meta_cred).crc32c
 
     def test_fetch_private_google_metadata_type(self):
+        """Fetch file content-type."""
         assert self.google_metadata(self.gcp_meta_cred).content_type
-    #
+
     def test_fetch_private_aws_metadata_size(self):
         """Fetch file size."""
         assert self.aws_metadata(self.aws_meta_cred)['ContentLength']
@@ -77,8 +80,10 @@ class TestBaseLoader(AbstractLoaderTest):
         """Fetch file content-type."""
         assert self.aws_metadata(self.aws_meta_cred)['ContentType']
 
-    # def test_bad_google_metadata_fetch(self):
-    #     assert not self.google_metadata(self.bad_gcp_meta_cred)
+    def test_bad_google_metadata_fetch(self):
+        """Assert that using the default credentials will fail."""
+        assert not self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
 
     def test_bad_aws_metadata_fetch(self):
+        """Assert that using the default credentials will fail."""
         assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
