@@ -35,7 +35,7 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.aws_bucket = 'travis-test-loader-dont-delete'
         cls.aws_key = 'pangur.txt'
 
-        cls.gcp_bucket = 'travis-test-loader-dontdelete'
+        cls.gcp_bucket = 'travis-test-loader-dont-delete'
         cls.gcp_key = 'drinking.txt'
 
     @classmethod
