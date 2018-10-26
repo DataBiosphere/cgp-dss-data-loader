@@ -32,7 +32,7 @@ class TestBaseLoader(AbstractLoaderTest):
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
 
         cls.google_project_id = 'platform-dev-178517'
-        cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id, False)
+
         # file containing a valid AWS AssumedRole ARN
         cls.aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
         with open(cls.aws_meta_cred, 'w') as f:
@@ -47,6 +47,9 @@ class TestBaseLoader(AbstractLoaderTest):
 
         cls.gcp_bucket = 'travis-test-loader-dont-delete'
         cls.gcp_key = 'drinking.txt'
+
+        cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id,
+                                                   False, cls.aws_meta_cred, cls.gcp_meta_cred)
 
     @classmethod
     def tearDownClass(cls):
