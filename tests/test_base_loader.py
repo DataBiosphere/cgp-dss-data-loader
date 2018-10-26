@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 class TestBaseLoader(AbstractLoaderTest):
     """Unittests for base_loader.py."""
-    # TODO: add a test in the integration tests
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -84,8 +83,8 @@ class TestBaseLoader(AbstractLoaderTest):
 
     def test_bad_google_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
-        assert not self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
+        assert not self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
 
     def test_bad_aws_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
-        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
+        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key), self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
