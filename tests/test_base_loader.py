@@ -93,7 +93,11 @@ class TestBaseLoader(AbstractLoaderTest):
 
     def test_bad_google_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
-        self.assertRaises(self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), Forbidden)
+        try:
+            self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
+            raise RuntimeError('User should be forbidden and somehow has access anyway.')  # this line skipped if running properly
+        except Forbidden:
+            pass
 
     def test_bad_aws_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
