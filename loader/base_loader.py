@@ -138,7 +138,6 @@ class DssUploader:
         # DurationSeconds can have a value from 900s to 43200s (as of 10.23.2018).
         # 900s = 15 min; 43200s = 12 hours
         # https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html
-        print(rolearn)
         assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName=session, DurationSeconds=duration)
 
         credentials = assumed_role['Credentials']
@@ -191,8 +190,9 @@ class DssUploader:
                 metadata['s3_etag'] = response['ETag']
             except KeyError as e:
                 # These standard metadata should always be present.
-                logging.error(f'Failed to access "s3://{bucket}/{key}" file metadata field. Error: {e}'
-                              ' The S3 file metadata for this file will be incomplete.')
+                logging.error(f'Failed to access "s3://{bucket}/{key}" file metadata field. Error: {e}.\n'
+                              f'The S3 file metadata for this file is inaccessible with your current credentials.  '
+                              f'Please supply additional metadata credentials using the --aws-metadata-cred option.')
         return metadata
 
     def get_gs_file_metadata(self, bucket: str, key: str) -> dict:
@@ -213,8 +213,10 @@ class DssUploader:
             metadata['crc32c'] = binascii.hexlify(base64.b64decode(blob_obj.crc32c)).decode("utf-8").lower()
             return metadata
         else:
-            warn(f'Could not find "gs://{bucket}/{key}"'
-                 ' The GS file metadata for this file reference will be missing.',
+            # These standard metadata should always be present.
+            warn(f'Failed to access "gs://{bucket}/{key}".  The S3 file metadata for this file is inaccessible '
+                 f'with your current credentials.  Please supply metadata credentials using the '
+                 f'--gcp-metadata-cred option.',
                  CloudUrlNotFound)
             return metadata
 

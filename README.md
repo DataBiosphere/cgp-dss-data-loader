@@ -45,6 +45,9 @@ When the loader submits data, it actually needs access to the referenced files i
 
 If the data is public, this is unnecessary.  However, if access is controlled, additional credentials must be provided.
 
+If using metadata credentials, it's strongly encouraged to perform a dry run first as a test.  This will ensure your 
+credentials are correct.
+
 ### (Optional) GCP Metadata Credentials
 If GCP files are being loaded that specifically require Google user credentials 
 (rather than Google Service Account credentials), perform the following steps:

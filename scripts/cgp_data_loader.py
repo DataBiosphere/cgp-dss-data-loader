@@ -64,12 +64,6 @@ def main(argv=sys.argv[1:]):
     logging.getLogger(__name__)
     suppress_verbose_logging()
 
-    if bool(options.aws_metadata_cred) != bool(options.gcp_metadata_cred):
-        logging.warning(f'Additional credentials are only specified for one cloud '
-                        '(if both are not supplied, things may not go as planned): '
-                        '\n{options.aws_metadata_cred}'
-                        '\n{options.gcp_metadata_cred}\n')
-
     dss_uploader = base_loader.DssUploader(options.dss_endpoint, options.staging_bucket,
                                            options.project_id, options.dry_run,
                                            options.aws_metadata_cred, options.gcp_metadata_cred)
