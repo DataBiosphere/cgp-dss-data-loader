@@ -22,6 +22,13 @@ class TestBaseLoader(AbstractLoaderTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+
+        underprivileged_credentials = os.path.abspath('underprivileged_credentials.json')
+        with open(underprivileged_credentials, 'w') as f:
+            f.write(os.environ['UNDERPRIVILEGED_TRAVIS_APP_CREDENTIALS'])
+        cls.stored_credentials = copy.deepcopy(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
+
         cls.google_project_id = 'platform-dev-178517'
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
@@ -32,12 +39,6 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
         with open(cls.gcp_meta_cred, 'w') as f:
             json.dump(ast.literal_eval(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS']), f)
-
-        underprivileged_credentials = os.path.abspath('underprivileged_credentials.json')
-        with open(underprivileged_credentials, 'w') as f:
-            f.write(os.environ['UNDERPRIVILEGED_TRAVIS_APP_CREDENTIALS'])
-        cls.stored_credentials = copy.deepcopy(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
 
         cls.aws_bucket = 'travis-test-loader-dont-delete'
         cls.aws_key = 'pangur.txt'
