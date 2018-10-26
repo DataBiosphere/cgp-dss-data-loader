@@ -36,7 +36,7 @@ def main(argv=sys.argv[1:]):
     parser.add_argument('input_json', metavar='INPUT_JSON',
                         help="Path to the standard JSON format input file")
     parser.add_argument('-p', '--project-id', dest='project_id', default='platform-dev-178517',
-                        help='Specify the Google project ID.')
+                        help='Specify the Google project ID for access to GCP requester pays buckets.')
     parser.add_argument('--aws-metadata-cred', dest='aws_metadata_cred', default=None,
                         help='The loader by default needs no additional credentials to '
                              'access public AWS references, but when attempting to access '

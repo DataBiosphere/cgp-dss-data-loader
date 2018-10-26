@@ -43,11 +43,13 @@ for both of these before you can run the program.
 When the loader submits data, it actually needs access to the referenced files in the account to obtain metadata 
 (e.g. hash and size) that may be in another account.
 
-If the data is public, this is unnecessary.  However, if it is private data, a second account that is authorized 
-needs to be specified.
+If the data is public, this is unnecessary.  However, if access is controlled, additional credentials must be provided.
 
 ### (Optional) GCP Metadata Credentials
-Make sure you have [gcloud](https://cloud.google.com/sdk/install) installed and run:
+If GCP files are being loaded that specifically require Google user credentials 
+(rather than Google Service Account credentials), perform the following steps:
+
+1. Make sure you have [gcloud](https://cloud.google.com/sdk/install) installed.
 
 1. gcloud auth application-default login
 
@@ -61,9 +63,11 @@ Make sure you have [gcloud](https://cloud.google.com/sdk/install) installed and 
 
 1. This file can then be used by the loader by specifying (as an example):
 
-    `--gce-metadata-cred=/home/<user>/metadata_credentials/application_default_credentials.json`
+    `--gce-metadata-cred=/home/<user>/metadata_credentials/my_user_credentials.json`
 
 ### (Optional) AWS Metadata Credentials
+For when AWS files are being loaded that require assuming a role for access.
+
 **One caveat, AWS allows a maximum of 12 hours under an assumed role for a single session, so 
 if loading takes longer than that, it may break.
 
@@ -74,6 +78,8 @@ loader will assume the role on your behalf when gathering information about the 
 Additional information on setting up an AssumedRole through AWS:
 - https://docs.aws.amazon.com/IAM/latest/UserGuide/tutorial_cross-account-with-roles.html
 - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-api.html
+
+If AWS files are being loaded that require assuming a role for access, perform the following steps:
 
 1. Write a file containing the ARN, for example:
 
