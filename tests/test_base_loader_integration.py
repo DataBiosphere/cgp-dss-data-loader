@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import ast
+import copy
 import uuid
 import boto3
 from botocore.exceptions import ClientError
@@ -23,7 +24,15 @@ class TestBaseLoader(AbstractLoaderTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+
+        underprivileged_credentials = os.path.abspath('underprivileged_credentials.json')
+        with open(underprivileged_credentials, 'w') as f:
+            f.write(os.environ['UNDERPRIVILEGED_TRAVIS_APP_CREDENTIALS'])
+        cls.stored_credentials = copy.deepcopy(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
+
         cls.google_project_id = 'platform-dev-178517'
+        cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
         cls.aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
         with open(cls.aws_meta_cred, 'w') as f:
@@ -39,10 +48,9 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.gcp_bucket = 'travis-test-loader-dont-delete'
         cls.gcp_key = 'drinking.txt'
 
-        cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id, False, cls.aws_meta_cred, cls.gcp_meta_cred)
-
     @classmethod
     def tearDownClass(cls):
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = cls.stored_credentials
         if os.path.exists(cls.aws_meta_cred):
             os.remove(cls.aws_meta_cred)
         if os.path.exists(cls.gcp_meta_cred):
@@ -56,12 +64,12 @@ class TestBaseLoader(AbstractLoaderTest):
     #                                                      1,
     #                                                      uuid.uuid4(),
     #                                                      1)
-    #
-    # def test_gcp_fetch_file_with_metadata_credentials_needed(self):
-    #     self.dss_uploader.dry_run = True
-    #     self.dss_uploader.upload_cloud_file_by_reference('drinking.txt',
-    #                                                      uuid.uuid4(),
-    #                                                      {'gs://travis-test-loader-dont-delete/drinking.txt'},
-    #                                                      1,
-    #                                                      uuid.uuid4(),
-    #                                                      1)
+
+    def test_gcp_fetch_file_with_metadata_credentials_needed(self):
+        self.dss_uploader.dry_run = True
+        self.dss_uploader.upload_cloud_file_by_reference('drinking.txt',
+                                                         uuid.uuid4(),
+                                                         {'gs://travis-test-loader-dont-delete/drinking.txt'},
+                                                         439,
+                                                         uuid.uuid4(),
+                                                         1)
