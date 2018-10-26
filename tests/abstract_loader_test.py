@@ -1,3 +1,5 @@
+import ast
+import copy
 import json
 import os
 import tempfile
@@ -22,6 +24,7 @@ class AbstractLoaderTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.google_project_id = 'platform-dev-178517'
         cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
         cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'commons-dss-upload')
 
@@ -34,6 +37,32 @@ class AbstractLoaderTest(unittest.TestCase):
         dss_config = HCAConfig(name='loader-test', save_on_exit=False, autosave=False)
         dss_config['DSSClient'].swagger_url = f'{cls.dss_endpoint}/swagger.json'
         cls.dss_client = DSSClient(config=dss_config)
+
+    @staticmethod
+    def set_underprivileged_google_client():
+        # Service account: travis-underpriveleged-tester@platform-dev-178517.iam.gserviceaccount.com
+        # Has only viewer level permissions, and can revoke access if a bucket requires at least editor level.
+        # Call this function to run as this service account.  Return default credentials (allowing one to
+        # reset when done).
+        underprivileged_credentials = os.path.abspath('underprivileged_credentials.json')
+        with open(underprivileged_credentials, 'w') as f:
+            f.write(os.environ['UNDERPRIVILEGED_TRAVIS_APP_CREDENTIALS'])
+        stored_credentials = copy.deepcopy(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
+        return stored_credentials
+
+    @staticmethod
+    def create_metadata_files():
+        """Creates 2 files appropriate for use as metadata credentialing inputs."""
+        # file containing a valid AWS AssumedRole ARN
+        aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
+        with open(aws_meta_cred, 'w') as f:
+            f.write('arn:aws:iam::719818754276:role/travis_access_test_bucket')
+        # file containing valid GCP credentials (travis.platform.dev@gmail.com; editor permissions)
+        gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
+        with open(gcp_meta_cred, 'w') as f:
+            json.dump(ast.literal_eval(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS']), f)
+        return aws_meta_cred, gcp_meta_cred
 
     @eventually(timeout_seconds=5.0, retry_interval_seconds=1.0)
     def _search_for_bundle(self, bundle_uuid):

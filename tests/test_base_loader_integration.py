@@ -1,6 +1,3 @@
-import ast
-import copy
-import json
 import logging
 import os
 import sys
@@ -21,25 +18,12 @@ class TestBaseLoaderIntegration(AbstractLoaderTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.google_project_id = 'platform-dev-178517'
 
-        # Service account: travis-underpriveleged-tester@platform-dev-178517.iam.gserviceaccount.com
-        # Has only viewer level permissions, while the bucket requires at least editor level.
-        # Only use these permissions for the tests in this file.
-        underprivileged_credentials = os.path.abspath('underprivileged_credentials.json')
-        with open(underprivileged_credentials, 'w') as f:
-            f.write(os.environ['UNDERPRIVILEGED_TRAVIS_APP_CREDENTIALS'])
-        cls.stored_credentials = copy.deepcopy(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
+        # run as a google service account with only viewer access
+        cls.stored_credentials = cls.set_underprivileged_google_client()
 
-        # file containing a valid AWS AssumedRole ARN
-        cls.aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
-        with open(cls.aws_meta_cred, 'w') as f:
-            f.write('arn:aws:iam::719818754276:role/travis_access_test_bucket')
-        # file containing valid GCP credentials (travis.platform.dev@gmail.com; editor permissions)
-        cls.gcp_meta_cred = os.path.abspath('tests/test_data/gcp.json')
-        with open(cls.gcp_meta_cred, 'w') as f:
-            json.dump(ast.literal_eval(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS']), f)
+        # turn travis env vars into input files and return the paths
+        cls.aws_meta_cred, cls.gcp_meta_cred = cls.create_metadata_files()
 
         cls.aws_bucket = 'travis-test-loader-dont-delete'
         cls.aws_key = 'pangur.txt'
