@@ -196,8 +196,8 @@ class StandardFormatBundleUploader:
 
     def _load_parsed_bundles_concurrent(self):
         """Loads already parsed bundles concurrently using threads"""
-        patch_connection_pools(maxsize=256)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        patch_connection_pools(maxsize=64)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(self._load_bundle_concurrent, count, parsed_bundle)
                        for count, parsed_bundle in enumerate(self.bundles_parsed)]
             concurrent.futures.wait(futures)

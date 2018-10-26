@@ -11,8 +11,7 @@ def load_json_from_file(input_file_path: str):
 
 def suppress_verbose_logging():
     for logger_name in logging.Logger.manager.loggerDict:  # type: ignore
-        if (logger_name.startswith("botocore") or
-                logger_name.startswith("boto3.resources")):
+        if (logger_name.startswith("botocore") or logger_name.startswith("boto3.resources")):
             logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 
