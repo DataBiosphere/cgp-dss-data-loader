@@ -6,6 +6,7 @@ import ast
 import copy
 import boto3
 from botocore.exceptions import ClientError
+from google.api_core.exceptions import Forbidden
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
@@ -92,7 +93,7 @@ class TestBaseLoader(AbstractLoaderTest):
 
     def test_bad_google_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
-        assert not self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
+        self.assertRaises(self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), Forbidden)
 
     def test_bad_aws_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
