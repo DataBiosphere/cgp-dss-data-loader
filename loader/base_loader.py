@@ -190,7 +190,7 @@ class DssUploader:
                 metadata['s3_etag'] = response['ETag']
             except KeyError as e:
                 # These standard metadata should always be present.
-                logging.error(f'Failed to access "s3://{bucket}/{key}" file metadata field. Error: {e}.\n'
+                logging.error(f'Could not find "s3://{bucket}/{key}" file metadata field. Error: {e}.\n'
                               f'The S3 file metadata for this file is inaccessible with your current credentials.  '
                               f'Please supply additional metadata credentials using the --aws-metadata-cred option.')
         return metadata
@@ -214,7 +214,7 @@ class DssUploader:
             return metadata
         else:
             # These standard metadata should always be present.
-            warn(f'Failed to access "gs://{bucket}/{key}".  The S3 file metadata for this file is inaccessible '
+            warn(f'Could not find "gs://{bucket}/{key}".  The S3 file metadata for this file is inaccessible '
                  f'with your current credentials.  Please supply metadata credentials using the '
                  f'--gcp-metadata-cred option.',
                  CloudUrlNotFound)
