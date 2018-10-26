@@ -125,4 +125,4 @@ able to access the bucket.  Their permissions were generated with:
 
 `gcloud auth application-default login`
 
-And are stored in AWS under: `/travis/googlesecret/loadertestdontdelete`
+And are stored in the AWS Secrets Manager under: `/travis/googlesecret/loadertestdontdelete`

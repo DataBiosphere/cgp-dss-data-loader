@@ -101,7 +101,7 @@ class DssUploader:
         self.dry_run = dry_run
         self.s3_client = boto3.client("s3")
         self.s3_blobstore = s3.S3BlobStore(self.s3_client)
-        self.gs_client = Client()
+        self.gs_client = Client(project=self.google_project_id)
 
         # optional clients for fetching protected metadata that the
         # main credentials may not have access to
@@ -131,14 +131,14 @@ class DssUploader:
         if not aws_meta_cred:
             return None
 
-        client = boto3.client('sts')
+        sts_client = boto3.client('sts')
         with open(aws_meta_cred, 'r') as f:
-            rolearn = f.read().strip()
+            role_arn = f.read().strip()
 
         # DurationSeconds can have a value from 900s to 43200s (as of 10.23.2018).
         # 900s = 15 min; 43200s = 12 hours
         # https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role.html
-        assumed_role = client.assume_role(RoleArn=rolearn, RoleSessionName=session, DurationSeconds=duration)
+        assumed_role = sts_client.assume_role(RoleArn=role_arn, RoleSessionName=session, DurationSeconds=duration)
 
         credentials = assumed_role['Credentials']
         return boto3.client('s3',
@@ -294,8 +294,8 @@ class DssUploader:
             Consolidates cloud file metadata to create the JSON used to load by reference
             into the DSS.
 
-            :param input_metadata: An initial dictionary of dict(size=size) to track file sizes,
-                                   which this function will recursively change.
+            :param input_metadata: An initial dictionary containing metadata about the file
+                                   provided by the input file to the loader.
             :param file_cloud_urls: A set of 'gs://' and 's3://' bucket URLs.
                                     e.g. {'gs://broad-public-datasets/g.bam', 's3://ucsc-topmed-datasets/a.bam'}
             :param s3_metadata: Dictionary of meta data produced by self.get_s3_file_metadata().
