@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import ast
+import copy
 import boto3
 from botocore.exceptions import ClientError
 
@@ -32,6 +33,12 @@ class TestBaseLoader(AbstractLoaderTest):
         with open(cls.gcp_meta_cred, 'w') as f:
             json.dump(ast.literal_eval(os.environ['TRAVISUSER_GOOGLE_CREDENTIALS']), f)
 
+        underprivileged_credentials = os.path.abspath('underprivileged_credentials.json')
+        with open(underprivileged_credentials, 'w') as f:
+            f.write(os.environ['UNDERPRIVILEGED_TRAVIS_APP_CREDENTIALS'])
+        cls.stored_credentials = copy.deepcopy(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
+
         cls.aws_bucket = 'travis-test-loader-dont-delete'
         cls.aws_key = 'pangur.txt'
 
@@ -40,6 +47,7 @@ class TestBaseLoader(AbstractLoaderTest):
 
     @classmethod
     def tearDownClass(cls):
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = cls.stored_credentials
         if os.path.exists(cls.aws_meta_cred):
             os.remove(cls.aws_meta_cred)
         if os.path.exists(cls.gcp_meta_cred):
