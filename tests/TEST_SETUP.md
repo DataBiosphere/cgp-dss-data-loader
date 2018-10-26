@@ -80,7 +80,7 @@ BUCKET POLICY (travis-loader-test-dont-delete):
                 "AWS": [
                     "arn:aws:iam::719818754276:role/travis_access_test_bucket",
                     "arn:aws:sts::719818754276:assumed-role/travis_access_test_bucket/travis",
-                    "arn:aws:iam::719818754276:user/lblauvel@ucsc.edu"
+                    "arn:aws:iam::719818754276:user/anon@ucsc.edu"
                 ]
             },
             "Action": "*",
@@ -95,7 +95,7 @@ BUCKET POLICY (travis-loader-test-dont-delete):
                 "AWS": [
                     "arn:aws:iam::719818754276:role/travis_access_test_bucket",
                     "arn:aws:sts::719818754276:assumed-role/travis_access_test_bucket/travis",
-                    "arn:aws:iam::719818754276:user/lblauvel@ucsc.edu"
+                    "arn:aws:iam::719818754276:user/anon@ucsc.edu"
                 ]
             },
             "Action": "*",
