@@ -116,7 +116,7 @@ allowing those two users to assume the role that would allow them to access the 
 The `travis-test-loader-dont-delete` bucket was created and the permissions deleted for 
 `viewer` level users.
 
-A service account was created: `travis-underpriveleged-tester@platform-dev-178517.iam.gserviceaccount.com` 
+A service account with only viewer-level access was created: `travis-underpriveleged-tester@platform-dev-178517.iam.gserviceaccount.com` 
 that now couldn't access the bucket.  Their permissions were generated as a json key 
 through the browser.
 
