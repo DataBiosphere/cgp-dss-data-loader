@@ -59,14 +59,14 @@ class TestBaseLoader(AbstractLoaderTest):
         if os.path.exists(cls.gcp_meta_cred):
             os.remove(cls.gcp_meta_cred)
 
-    # def test_aws_fetch_file_with_metadata_credentials_needed(self):
-    #     self.dss_uploader.dry_run = True
-    #     self.dss_uploader.upload_cloud_file_by_reference('pangur.txt',
-    #                                                      uuid.uuid4(),
-    #                                                      {'s3://travis-test-loader-dont-delete/pangur.txt'},
-    #                                                      1,
-    #                                                      uuid.uuid4(),
-    #                                                      1)
+    def test_aws_fetch_file_with_metadata_credentials_needed(self):
+        self.dss_uploader.dry_run = True
+        self.dss_uploader.upload_cloud_file_by_reference('pangur.txt',
+                                                         uuid.uuid4(),
+                                                         {'s3://travis-test-loader-dont-delete/pangur.txt'},
+                                                         395,
+                                                         uuid.uuid4(),
+                                                         1)
 
     def test_gcp_fetch_file_with_metadata_credentials_needed(self):
         self.dss_uploader.dry_run = True
