@@ -93,8 +93,8 @@ class TestBaseLoader(AbstractLoaderTest):
 
     def test_bad_google_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
-        self.assertRaises(self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), Forbidden)
+        self.assertRaises(self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key), Forbidden)
 
     def test_bad_aws_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
-        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key), self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
+        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
