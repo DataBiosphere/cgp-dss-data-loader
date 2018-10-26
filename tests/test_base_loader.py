@@ -72,27 +72,27 @@ class TestBaseLoader(AbstractLoaderTest):
         return gs_bucket.get_blob(self.gcp_key)
 
     def test_fetch_private_google_metadata_size(self):
-        """Fetch file size."""
+        """Fetch file size.  Tests: get_gs_metadata_client()."""
         assert self.google_metadata(self.gcp_meta_cred).size
 
     def test_fetch_private_google_metadata_hash(self):
-        """Fetch file hash."""
+        """Fetch file hash.  Tests: get_gs_metadata_client()."""
         assert self.google_metadata(self.gcp_meta_cred).crc32c
 
     def test_fetch_private_google_metadata_type(self):
-        """Fetch file content-type."""
+        """Fetch file content-type.  Tests: get_gs_metadata_client()."""
         assert self.google_metadata(self.gcp_meta_cred).content_type
 
     def test_fetch_private_aws_metadata_size(self):
-        """Fetch file size."""
+        """Fetch file size.  Tests: get_s3_metadata_client()."""
         assert self.aws_metadata(self.aws_meta_cred)['ContentLength']
 
     def test_fetch_private_aws_metadata_hash(self):
-        """Fetch file etag hash."""
+        """Fetch file etag hash.  Tests: get_s3_metadata_client()."""
         assert self.aws_metadata(self.aws_meta_cred)['ETag']
 
     def test_fetch_private_aws_metadata_type(self):
-        """Fetch file content-type."""
+        """Fetch file content-type.  Tests: get_s3_metadata_client()."""
         assert self.aws_metadata(self.aws_meta_cred)['ContentType']
 
     def test_bad_google_metadata_fetch(self):
