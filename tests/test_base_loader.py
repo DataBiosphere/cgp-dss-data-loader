@@ -1,11 +1,10 @@
+import ast
+import copy
+import json
 import logging
 import os
 import sys
-import json
-import ast
-import copy
-import boto3
-from botocore.exceptions import ClientError
+
 from google.api_core.exceptions import Forbidden
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
@@ -23,15 +22,17 @@ class TestBaseLoader(AbstractLoaderTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.google_project_id = 'platform-dev-178517'
 
+        # Service account: travis-underpriveleged-tester@platform-dev-178517.iam.gserviceaccount.com
+        # Has only viewer level permissions, while the bucket requires at least editor level.
+        # Only use these permissions for the tests in this file.
         underprivileged_credentials = os.path.abspath('underprivileged_credentials.json')
         with open(underprivileged_credentials, 'w') as f:
             f.write(os.environ['UNDERPRIVILEGED_TRAVIS_APP_CREDENTIALS'])
         cls.stored_credentials = copy.deepcopy(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = underprivileged_credentials
 
-        cls.google_project_id = 'platform-dev-178517'
-        cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id, False)
         # file containing a valid AWS AssumedRole ARN
         cls.aws_meta_cred = os.path.abspath('tests/test_data/aws.config')
         with open(cls.aws_meta_cred, 'w') as f:
@@ -47,8 +48,11 @@ class TestBaseLoader(AbstractLoaderTest):
         cls.gcp_bucket = 'travis-test-loader-dont-delete'
         cls.gcp_key = 'drinking.txt'
 
+        cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id, False)
+
     @classmethod
     def tearDownClass(cls):
+        # Switch permissions back from the underprivileged service account to the default that travis was set to.
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = cls.stored_credentials
         if os.path.exists(cls.aws_meta_cred):
             os.remove(cls.aws_meta_cred)
@@ -95,7 +99,7 @@ class TestBaseLoader(AbstractLoaderTest):
         """Assert that using the default credentials will fail."""
         try:
             self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
-            raise RuntimeError('User should be forbidden and somehow has access anyway.')  # this line skipped if running properly
+            raise RuntimeError('User should be forbidden and somehow has access anyway.')  # skipped if running properly
         except Forbidden:
             pass
 
