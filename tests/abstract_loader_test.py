@@ -28,6 +28,12 @@ class AbstractLoaderTest(unittest.TestCase):
         cls.dss_endpoint = os.getenv("TEST_DSS_ENDPOINT", "https://hca-dss-4.ucsc-cgp-dev.org/v1")
         cls.staging_bucket = os.getenv('DSS_S3_STAGING_BUCKET', 'commons-dss-upload')
 
+        # Buckets/files for the base loader tests.
+        cls.base_loader_aws_bucket = 'travis-test-loader-dont-delete'
+        cls.base_loader_aws_key = 'pangur.txt'
+        cls.base_loader_gcp_bucket = 'travis-test-loader-dont-delete'
+        cls.base_loader_gcp_key = 'drinking.txt'
+
         # Work around problems with DSSClient initialization when there is
         # existing HCA configuration. The following issue has been submitted:
         # Problems accessing an alternate DSS from user scripts or unit tests #170

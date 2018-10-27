@@ -26,12 +26,6 @@ class TestBaseLoader(AbstractLoaderTest):
         # turn travis env vars into input files and return the paths
         cls.aws_meta_cred, cls.gcp_meta_cred = cls.create_metadata_files()
 
-        cls.aws_bucket = 'travis-test-loader-dont-delete'
-        cls.aws_key = 'pangur.txt'
-
-        cls.gcp_bucket = 'travis-test-loader-dont-delete'
-        cls.gcp_key = 'drinking.txt'
-
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id,
                                                    False)
 
@@ -47,14 +41,14 @@ class TestBaseLoader(AbstractLoaderTest):
     def aws_metadata(self, credentials):
         """Fetches a credentialed client using the get_gs_metadata_client() function."""
         metaclient = self.dss_uploader.get_s3_metadata_client(credentials, session='travis', duration=3600)
-        response = metaclient.head_object(Bucket=self.aws_bucket, Key=self.aws_key, RequestPayer="requester")
+        response = metaclient.head_object(Bucket=self.base_loader_aws_bucket, Key=self.base_loader_aws_key, RequestPayer="requester")
         return response
 
     def google_metadata(self, credentials):
         """Fetches a credentialed client using the get_s3_metadata_client() function."""
         metaclient = self.dss_uploader.get_gs_metadata_client(credentials)
-        gs_bucket = metaclient.bucket(self.gcp_bucket, self.google_project_id)
-        return gs_bucket.get_blob(self.gcp_key)
+        gs_bucket = metaclient.bucket(self.base_loader_gcp_bucket, self.google_project_id)
+        return gs_bucket.get_blob(self.base_loader_gcp_key)
 
     def test_fetch_private_google_metadata_size(self):
         """Fetch file size.  Tests: get_gs_metadata_client()."""
@@ -83,11 +77,11 @@ class TestBaseLoader(AbstractLoaderTest):
     def test_bad_google_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
         try:
-            self.dss_uploader.get_gs_file_metadata(self.gcp_bucket, self.gcp_key)
+            self.dss_uploader.get_gs_file_metadata(self.base_loader_gcp_bucket, self.base_loader_gcp_key)
             raise RuntimeError('User should be forbidden and somehow has access anyway.')  # skipped if running properly
         except Forbidden:
             pass
 
     def test_bad_aws_metadata_fetch(self):
         """Assert that using the default credentials will fail."""
-        assert not self.dss_uploader.get_s3_file_metadata(self.aws_bucket, self.aws_key)
+        assert not self.dss_uploader.get_s3_file_metadata(self.base_loader_aws_bucket, self.base_loader_aws_key)

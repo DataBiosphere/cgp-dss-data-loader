@@ -25,12 +25,6 @@ class TestBaseLoaderIntegration(AbstractLoaderTest):
         # turn travis env vars into input files and return the paths
         cls.aws_meta_cred, cls.gcp_meta_cred = cls.create_metadata_files()
 
-        cls.aws_bucket = 'travis-test-loader-dont-delete'
-        cls.aws_key = 'pangur.txt'
-
-        cls.gcp_bucket = 'travis-test-loader-dont-delete'
-        cls.gcp_key = 'drinking.txt'
-
         cls.dss_uploader = base_loader.DssUploader(cls.dss_endpoint, cls.staging_bucket, cls.google_project_id,
                                                    False, cls.aws_meta_cred, cls.gcp_meta_cred)
 
@@ -49,9 +43,9 @@ class TestBaseLoaderIntegration(AbstractLoaderTest):
         credentials can fetch metadata it couldn't otherwise fetch from AWS.
         """
         self.dss_uploader.dry_run = True
-        self.dss_uploader.upload_cloud_file_by_reference('pangur.txt',
+        self.dss_uploader.upload_cloud_file_by_reference(f'{self.base_loader_aws_key}',
                                                          uuid.uuid4(),
-                                                         {'s3://travis-test-loader-dont-delete/pangur.txt'},
+                                                         {f's3://{self.base_loader_aws_bucket}/{self.base_loader_aws_key}'},
                                                          395,
                                                          uuid.uuid4(),
                                                          1)
@@ -62,9 +56,9 @@ class TestBaseLoaderIntegration(AbstractLoaderTest):
         credentials can fetch metadata it couldn't otherwise fetch from GCP.
         """
         self.dss_uploader.dry_run = True
-        self.dss_uploader.upload_cloud_file_by_reference('drinking.txt',
+        self.dss_uploader.upload_cloud_file_by_reference(f'{self.base_loader_gcp_key}',
                                                          uuid.uuid4(),
-                                                         {'gs://travis-test-loader-dont-delete/drinking.txt'},
+                                                         {f'gs://{self.base_loader_gcp_bucket}/{self.base_loader_gcp_key}'},
                                                          439,
                                                          uuid.uuid4(),
                                                          1)
