@@ -122,7 +122,7 @@ Run:
    Alternatively, if supplying additional credentials for private data:
 
    ```
-   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET -p GOOGLE_PROJECT_ID --gce-metadata-cred=gs_credentials.json --aws-metadata-cred=aws_credentials.config gtex-GTEx-v7_sanitized_pp.json
+   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET -p GOOGLE_PROJECT_ID --gce-metadata-cred=gs_credentials.json --aws-metadata-cred=aws_credentials.config gtex.json
    ```
 
 1. You did it!
