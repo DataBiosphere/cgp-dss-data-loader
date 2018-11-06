@@ -54,7 +54,9 @@ If GCP files are being loaded that specifically require Google user credentials
 
 1. Make sure you have [gcloud](https://cloud.google.com/sdk/install) installed.
 
-1. gcloud auth application-default login
+1. Run
+
+   ```gcloud auth application-default login```
 
 1. Follow the link to the account accessed.
 
@@ -66,7 +68,7 @@ If GCP files are being loaded that specifically require Google user credentials
 
 1. This file can then be used by the loader by specifying (as an example):
 
-    `--gce-metadata-cred=/home/<user>/metadata_credentials/my_user_credentials.json`
+    `--gcp-metadata-cred /home/<user>/metadata_credentials/my_user_credentials.json`
 
 ### (Optional) AWS Metadata Credentials
 For when AWS files are being loaded that require assuming a role for access.
@@ -90,7 +92,7 @@ If AWS files are being loaded that require assuming a role for access, perform t
 
 1. This file can then be used by the loader by specifying (as an example):
 
-    `--aws-metadata-cred=/home/<user>/aws_credentials.config`
+    `--aws-metadata-cred /home/<user>/aws_credentials.config`
 
 ## Running Tests
 Run:
@@ -122,7 +124,7 @@ Run:
    Alternatively, if supplying additional credentials for private data:
 
    ```
-   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET -p GOOGLE_PROJECT_ID --gce-metadata-cred=gs_credentials.json --aws-metadata-cred=aws_credentials.config gtex.json
+   dssload --no-dry-run --dss-endpoint MY_DSS_ENDPOINT --staging-bucket NAME_OF_MY_S3_BUCKET -p GOOGLE_PROJECT_ID --gcp-metadata-cred gs_credentials.json --aws-metadata-cred aws_credentials.config gtex.json
    ```
 
 1. You did it!
