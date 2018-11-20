@@ -11,7 +11,6 @@ https://docs.google.com/document/d/1QSa7Ubw-muyD_u0X_dq9WeKyK_dCJXi4Ex7S_pil1uk/
 Note: The TOPMed Google controlled access buckets are based on ACLs for user accounts
 Before running this loader, configure use of Google user account, run: gcloud auth login
 """
-
 import base64
 import binascii
 import json
@@ -105,8 +104,10 @@ class DssUploader:
 
         # optional clients for fetching protected metadata that the
         # main credentials may not have access to
-        self.s3_metadata_client = self.get_s3_metadata_client(aws_meta_cred)
-        self.gs_metadata_client = self.get_gs_metadata_client(gcp_meta_cred)
+        self.aws_meta_cred = aws_meta_cred
+        self.gcp_meta_cred = gcp_meta_cred
+        self.s3_metadata_client = self.get_s3_metadata_client(self.aws_meta_cred)
+        self.gs_metadata_client = self.get_gs_metadata_client(self.gcp_meta_cred)
 
         # Work around problems with DSSClient initialization when there is
         # existing HCA configuration. The following issue has been submitted:
@@ -162,37 +163,70 @@ class DssUploader:
         credentials = Credentials(token=None).from_authorized_user_file(gcp_meta_cred)
         return Client(project=self.google_project_id, credentials=credentials)
 
+    def handle_s3_client_error(self, err_code: str, bucket: str, key: str, attempt_refresh=True):
+        """
+        Will log warnings and consume the exception it was passed.  If the credentials get an
+        unauthorized/forbidden error, it will attempt to refresh metadata credentials (if they exist)
+        and try (only) once more.
+
+        :param bucket: Name of an S3 bucket
+        :param key: S3 file to upload.  err_code.g. 'output.txt' or 'data/output.txt'
+        :param attempt_refresh: Ensures attempting to refresh the metadata credentials happens only once per file.
+        :return: Returns an empty dict or a head response containing a dictionary of metadata values.
+        """
+        if err_code == str(requests.codes.not_found):
+            warn(f'Could not find \"s3://{bucket}/{key}\" Error: {err_code}'
+                 ' The S3 file metadata for this file reference will be missing.',
+                 CloudUrlNotFound)
+        # refresh the metadata credentials if blocked and if they exist
+        elif (err_code in (str(requests.codes.forbidden), str(requests.codes.unauthorized))) and self.aws_meta_cred:
+            if attempt_refresh:
+                self.s3_metadata_client = self.get_s3_metadata_client(self.aws_meta_cred)
+                return self.get_s3_file_head_response(bucket, key, attempt_refresh=False)
+            else:
+                warn(f'Could not find \"s3://{bucket}/{key}\" Error: {err_code}'
+                     ' The S3 file metadata for this file reference will be missing.',
+                     CloudUrlAccessWarning)
+        else:
+            warn(f'Could not find \"s3://{bucket}/{key}\" Error: {err_code}'
+                 ' The S3 file metadata for this file reference will be missing.',
+                 CloudUrlAccessWarning)
+        return dict()
+
+    def get_s3_file_head_response(self, bucket: str, key: str, attempt_refresh=True) -> dict:
+        """
+        Attempt to fetch a head response from an s3 file containing metadata about that file.
+
+        :param bucket: Name of an S3 bucket
+        :param key: S3 file to upload.  e.g. 'output.txt' or 'data/output.txt'
+        :param attempt_refresh: Ensures attempting to refresh the metadata credentials happens only once per file.
+        :return: Returns an empty dict or a head response containing a dictionary of metadata values.
+        """
+        client = self.s3_metadata_client if self.s3_metadata_client else self.s3_client
+        try:
+            return client.head_object(Bucket=bucket, Key=key, RequestPayer="requester")
+        except botocore.exceptions.ClientError as e:
+            return self.handle_s3_client_error(e.response['Error']['Code'], bucket, key, attempt_refresh)
+
     def get_s3_file_metadata(self, bucket: str, key: str) -> dict:
         """
         Format an S3 file's metadata into a dictionary for uploading as a json.
 
         :param bucket: Name of an S3 bucket
         :param key: S3 file to upload.  e.g. 'output.txt' or 'data/output.txt'
-        :return: A dictionary of metadata values.
+        :return: Returns an empty dict or a head response containing a dictionary of metadata values.
         """
+        response = self.get_s3_file_head_response(bucket, key)
         metadata = dict()
-        client = self.s3_metadata_client if self.s3_metadata_client else self.s3_client
         try:
-            response = client.head_object(Bucket=bucket, Key=key, RequestPayer="requester")
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == str(requests.codes.not_found):
-                warn(f'Could not find \"s3://{bucket}/{key}\" Error: {e}'
-                     ' The S3 file metadata for this file reference will be missing.',
-                     CloudUrlNotFound)
-            else:
-                warn(f"Failed to access \"s3://{bucket}/{key}\" Error: {e}"
-                     " The S3 file metadata for this file reference will be missing.",
-                     CloudUrlAccessWarning)
-        else:
-            try:
-                metadata['size'] = response['ContentLength']
-                metadata['content-type'] = response['ContentType']
-                metadata['s3_etag'] = response['ETag']
-            except KeyError as e:
-                # These standard metadata should always be present.
-                logging.error(f'Could not find "s3://{bucket}/{key}" file metadata field. Error: {e}.\n'
-                              f'The S3 file metadata for this file is inaccessible with your current credentials.  '
-                              f'Please supply additional metadata credentials using the --aws-metadata-cred option.')
+            metadata['size'] = response['ContentLength']
+            metadata['content-type'] = response['ContentType']
+            metadata['s3_etag'] = response['ETag']
+        except KeyError as e:
+            # These standard metadata should always be present.
+            logging.error(f'Could not find "s3://{bucket}/{key}" file metadata field. Error: {e}.\n'
+                          f'The S3 file metadata for this file is inaccessible with your current credentials.  '
+                          f'Please supply additional metadata credentials using the --aws-metadata-cred option.')
         return metadata
 
     def get_gs_file_metadata(self, bucket: str, key: str) -> dict:
