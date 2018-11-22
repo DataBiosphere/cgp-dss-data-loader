@@ -172,7 +172,7 @@ class DssUploader:
         :param bucket: Name of an S3 bucket
         :param key: S3 file to upload.  err_code.g. 'output.txt' or 'data/output.txt'
         :param attempt_refresh: Ensures attempting to refresh the metadata credentials happens only once per file.
-        :return: Returns an empty dict or a head response containing a dictionary of metadata values.
+        :return: Returns a head response containing a dictionary of metadata values, or an empty dict in the case of an error.
         """
         if err_code == str(requests.codes.not_found):
             warn(f'Could not find \"s3://{bucket}/{key}\" Error: {err_code}'
