@@ -179,14 +179,9 @@ class DssUploader:
                  ' The S3 file metadata for this file reference will be missing.',
                  CloudUrlNotFound)
         # refresh the metadata credentials if blocked and if they exist
-        elif (err_code in (str(requests.codes.forbidden), str(requests.codes.unauthorized))) and self.aws_meta_cred:
-            if attempt_refresh:
-                self.s3_metadata_client = self.get_s3_metadata_client(self.aws_meta_cred)
-                return self.get_s3_file_head_response(bucket, key, attempt_refresh=False)
-            else:
-                warn(f'Could not find \"s3://{bucket}/{key}\" Error: {err_code}'
-                     ' The S3 file metadata for this file reference will be missing.',
-                     CloudUrlAccessWarning)
+        elif (err_code in (str(requests.codes.forbidden), str(requests.codes.unauthorized))) and self.aws_meta_cred and attempt_refresh:
+            self.s3_metadata_client = self.get_s3_metadata_client(self.aws_meta_cred)
+            return self.get_s3_file_head_response(bucket, key, attempt_refresh=False)
         else:
             warn(f'Could not find \"s3://{bucket}/{key}\" Error: {err_code}'
                  ' The S3 file metadata for this file reference will be missing.',
