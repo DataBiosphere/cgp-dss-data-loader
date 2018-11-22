@@ -200,7 +200,7 @@ class DssUploader:
         :param bucket: Name of an S3 bucket
         :param key: S3 file to upload.  e.g. 'output.txt' or 'data/output.txt'
         :param attempt_refresh: Ensures attempting to refresh the metadata credentials happens only once per file.
-        :return: Returns an empty dict or a head response containing a dictionary of metadata values.
+        :return: Returns a head response containing a dictionary of metadata values, or an empty dict in the case of an error.
         """
         client = self.s3_metadata_client if self.s3_metadata_client else self.s3_client
         try:
@@ -214,7 +214,7 @@ class DssUploader:
 
         :param bucket: Name of an S3 bucket
         :param key: S3 file to upload.  e.g. 'output.txt' or 'data/output.txt'
-        :return: Returns a dictionary of metadata values (or an empty dictionary).
+        :return: Returns a dictionary of metadata values (or an empty dictionary in the case of an error).
         """
         response = self.get_s3_file_head_response(bucket, key)
         metadata = dict()
